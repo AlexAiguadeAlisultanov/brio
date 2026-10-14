@@ -267,6 +267,123 @@ export const es = {
   'seg.derivar.rotulo': 'Tómatelo como una orientación',
   'seg.derivar.texto':
     'Con lo que marcaste en salud, trátalo como una guía y no como una pauta cerrada. Habla con tu médico antes de apretar de verdad.',
+
+  // --- Hoy ---
+  'hoy.titulo': 'Hoy',
+  'hoy.restante': 'Te quedan {n} kcal',
+  'hoy.pasado': 'Te has pasado {n} kcal',
+  'hoy.justo': 'Justo en tu objetivo',
+  'hoy.entrenoHoy': 'Entreno de hoy',
+  'hoy.entrenoAvance': '{hechas} de {total} series',
+  'hoy.entrenoEmpezar': 'Empezar',
+  'hoy.entrenoSeguir': 'Seguir',
+  'hoy.entrenoHecho': 'Entreno hecho',
+  'hoy.descansoTitulo': 'Hoy descansas',
+  'hoy.descansoApoyo': 'Aprovecha para recuperar. Mañana seguimos.',
+  'hoy.sinEntreno': 'Tu plan todavía no trae rutina.',
+  'hoy.comidas': 'Comidas de hoy',
+  'hoy.comidaRegistrada': 'Registrada',
+  'hoy.totalDia': 'Hoy llevas {n} kcal',
+  'hoy.agua': 'Agua',
+  'hoy.aguaResumen': '{n} de {m} ml',
+  'hoy.aguaVaso': 'Vaso',
+  'hoy.aguaQuitar': 'Quitar un vaso',
+  'hoy.vacioTitulo': 'Tu primer día',
+  'hoy.vacioApoyo': 'Aquí verás tus anillos, tu entreno y tus comidas. Registra algo y se irán llenando.',
+  'hoy.sinCifrasTitulo': 'Hoy vamos sin números',
+  'hoy.sinCifrasTexto':
+    'Para cuidarte, hoy no mostramos calorías ni macros. Muévete por cómo te hace sentir y come suficiente.',
+  'hoy.sinPlanTitulo': 'Aún no tienes plan',
+  'hoy.sinPlanTexto': 'Termina el cuestionario y te montamos tu entreno y tus comidas.',
+  'hoy.sinPlanBoton': 'Montar mi plan',
+
+  // --- Entreno de hoy ---
+  'entreno.titulo': 'Entreno de hoy',
+  'entreno.serieN': 'Serie {n}',
+  'entreno.peso': 'Peso',
+  'entreno.reps': 'Reps',
+  'entreno.objetivo': '{series} series · {min} a {max} reps',
+  'entreno.rirObjetivo': 'RIR {min} a {max}',
+  'entreno.pct1rm': '{min} a {max}% de tu 1RM',
+  'entreno.sugerido': 'Sugerido {peso} kg · {reps} reps',
+  'entreno.verDemo': 'Ver demostración',
+  'entreno.cambiar': 'Cambiar ejercicio',
+  'entreno.descanso': 'Descanso',
+  'entreno.descansoFin': 'Listo, a por la siguiente',
+  'entreno.terminar': 'Terminar entreno',
+  'entreno.sinSesion': 'Hoy no toca entreno.',
+  'entreno.volver': 'Volver',
+
+  // --- Feedback de la sesión ---
+  'feedback.titulo': '¿Cómo ha ido?',
+  'feedback.apoyo': 'Con esto ajustamos la carga de la próxima vez.',
+  'feedback.facil': 'Demasiado fácil',
+  'feedback.ok': 'En su punto',
+  'feedback.dificil': 'Demasiado duro',
+  'feedback.guardar': 'Guardar',
+  'feedback.guardado': 'Anotado. La próxima la afinamos.',
+
+  // --- Señales de parada ---
+  'parada.rotulo': 'Para si notas',
+  'parada.senales': 'Dolor en el pecho, mareo, desmayo, falta de aire o palpitaciones.',
+  'parada.texto': 'Si aparece alguna de estas señales, para y busca ayuda médica.',
+
+  // --- Indicador de origen ---
+  'origen.motor': 'Calculado por Brío',
+  'origen.ia': 'Adaptado por IA',
+  'origen.local': 'Sin conexión',
+  'origen.localNota': 'Te proponemos el cambio más parecido en números. La explicación llega cuando vuelva la conexión.',
+
+  // --- Motivo del cambio ---
+  'motivo.titulo': '¿Por qué lo cambias?',
+  'motivo.noPuedo': 'No puedo con esto',
+  'motivo.noPuedoDesc': 'Lo quitamos de tu plan a partir de ahora.',
+  'motivo.hoyNo': 'Hoy no me apetece',
+  'motivo.hoyNoDesc': 'Solo cambia por hoy.',
+  'motivo.molesta': 'Me molesta una zona',
+  'motivo.molestaDesc': 'Evitaremos cargar esa zona de ahora en adelante.',
+  'motivo.sinMaterial': 'No tengo el material',
+  'motivo.sinMaterialDesc': 'Lo tendremos en cuenta en tu plan.',
+  'motivoComida.alergia': 'Alergia',
+  'motivoComida.intolerancia': 'Intolerancia',
+  'motivoComida.dieta': 'No encaja con mi dieta',
+  'motivoComida.ingrediente': 'No tengo el ingrediente',
+
+  // --- Sustitución ---
+  'sust.comidaTitulo': 'Cambiar comida',
+  'sust.ejercicioTitulo': 'Cambiar ejercicio',
+  'sust.elige': 'Elige una alternativa',
+  'sust.aplicar': 'Aplicar',
+  'sust.aproximado': 'Aproximado',
+  'sust.mismoGrupo': 'mismo grupo',
+  'sust.mismoPatron': 'mismo trabajo',
+  'sust.conserva': 'mantiene {series} series de {min} a {max}',
+  'sust.restriccionGuardada': 'Hecho, no volveremos a proponértelo.',
+  'sust.lesionGuardada': 'Lo tendremos en cuenta y evitaremos cargar esa zona.',
+  'sust.vacioComidaTitulo': 'Sin un cambio seguro',
+  'sust.vacioComidaTexto':
+    'Con tus restricciones no hay una alternativa que cumpla todo. Mantenemos esta comida y conviene que lo veas con un profesional.',
+  'sust.vacioEjercicioTitulo': 'Sin un cambio equivalente',
+  'sust.vacioEjercicioTexto':
+    'Con tu material y tus zonas a cuidar no hay otro ejercicio equivalente. Mantenemos este y conviene que lo veas con un profesional.',
+  'sust.igualKcal': 'mismas kcal',
+  'sust.mas': 'más',
+  'sust.menos': 'menos',
+
+  // --- Check-in semanal ---
+  'checkin.titulo': 'Revisión semanal',
+  'checkin.apoyo': 'Miramos tu peso y lo que comes para ajustar el rumbo.',
+  'checkin.pesoMedio': 'Peso medio',
+  'checkin.ritmoBajando': 'Bajas unos {n} kg por semana',
+  'checkin.ritmoSubiendo': 'Subes unos {n} kg por semana',
+  'checkin.ritmoEstable': 'Tu peso apenas se mueve',
+  'checkin.sinDatos': 'Necesitamos un par de semanas de datos para afinar.',
+  'checkin.propuestaBajar': 'Bajamos {n} kcal al día para volver al ritmo.',
+  'checkin.propuestaSubir': 'Subimos {n} kcal al día para volver al ritmo.',
+  'checkin.propuestaMantener': 'Seguimos igual: vas en tu ritmo.',
+  'checkin.confianzaBaja': 'Con pocos datos, vamos con cautela.',
+  'checkin.aplicar': 'Aplicar',
+  'checkin.aplicado': 'Ajuste guardado.',
 } as const
 
 export type ClaveI18n = keyof typeof es

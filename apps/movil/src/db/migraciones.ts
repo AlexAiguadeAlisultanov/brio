@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite'
 
-import { SQL_BORRAR_TODO, SQL_CREAR_V1, VERSION_ESQUEMA } from './esquema'
+import { SQL_BORRAR_TODO, SQL_CREAR_V1, SQL_CREAR_V2, VERSION_ESQUEMA } from './esquema'
 
 // Migraciones versionadas con PRAGMA user_version. Cada paso lleva a la base de una versión a
 // la siguiente dentro de una transacción. Si algo falla a mitad, en vez de dejar la app
@@ -20,6 +20,12 @@ const PASOS: PasoMigracion[] = [
       await db.execAsync(SQL_CREAR_V1)
     },
   },
+  {
+    version: 2,
+    aplicar: async (db) => {
+      await db.execAsync(SQL_CREAR_V2)
+    },
+  },
 ]
 
 async function leerVersion(db: SQLiteDatabase): Promise<number> {
@@ -27,10 +33,13 @@ async function leerVersion(db: SQLiteDatabase): Promise<number> {
   return fila?.user_version ?? 0
 }
 
-// Recrea el esquema desde cero. Devuelve la base a la última versión, vacía.
+// Recrea el esquema desde cero. Aplica todos los pasos en orden para dejar la base en la
+// última versión, vacía (si solo corriera la V1 quedaría sin la columna y la tabla de la V2).
 export async function restablecerDatosLocales(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(SQL_BORRAR_TODO)
-  await db.execAsync(SQL_CREAR_V1)
+  for (const paso of PASOS) {
+    await paso.aplicar(db)
+  }
   // La versión no admite parámetros ligados; VERSION_ESQUEMA es un entero controlado.
   await db.execAsync(`PRAGMA user_version = ${VERSION_ESQUEMA};`)
 }

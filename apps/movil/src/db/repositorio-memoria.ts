@@ -3,6 +3,8 @@ import type { AjusteSemanal, Objetivo, Perfil, Plan, RegistroProgreso } from '@b
 import {
   AJUSTES_APP_POR_DEFECTO,
   type AjustesApp,
+  type ComidaGuardada,
+  type FeedbackSesion,
   type NuevaComida,
   type NuevaRestriccion,
   type NuevaSerie,
@@ -11,6 +13,8 @@ import {
   type PlanGuardado,
   type Repositorio,
   type RestriccionGuardada,
+  type SerieGuardada,
+  type SesionGuardada,
 } from './repositorio'
 
 // Repositorio en memoria, con el MISMO contrato que el de SQLite. Se usa en web, donde
@@ -25,11 +29,12 @@ interface EstadoMemoria {
   objetivo: Objetivo | null
   restricciones: (RestriccionGuardada & { borrado: boolean })[]
   planes: PlanGuardado[]
-  sesiones: (NuevaSesion & { id: number })[]
+  sesiones: (NuevaSesion & { id: number; feedback?: FeedbackSesion })[]
   series: (NuevaSerie & { id: number })[]
   comidas: (NuevaComida & { id: number })[]
   progreso: NuevoProgreso[]
   ajustes: (AjusteSemanal & { id: number; planId?: number })[]
+  agua: Record<string, number>
   ajustesApp: AjustesApp
   secuencia: number
 }
@@ -45,9 +50,34 @@ function estadoVacio(): EstadoMemoria {
     comidas: [],
     progreso: [],
     ajustes: [],
+    agua: {},
     ajustesApp: { ...AJUSTES_APP_POR_DEFECTO },
     secuencia: 0,
   }
+}
+
+function macrosParciales(c: NuevaComida): ComidaGuardada['macros'] {
+  const m: ComidaGuardada['macros'] = {}
+  if (c.macros?.kcal != null) m.kcal = c.macros.kcal
+  if (c.macros?.proteinaG != null) m.proteinaG = c.macros.proteinaG
+  if (c.macros?.grasaG != null) m.grasaG = c.macros.grasaG
+  if (c.macros?.carbosG != null) m.carbosG = c.macros.carbosG
+  return m
+}
+
+function aSerieGuardada(s: NuevaSerie & { id: number }): SerieGuardada {
+  const g: SerieGuardada = {
+    id: s.id,
+    sesionId: s.sesionId,
+    ejercicioId: s.ejercicioId,
+    numeroSerie: s.numeroSerie,
+    completada: s.completada ?? false,
+    fecha: s.fecha,
+  }
+  if (s.pesoKg != null) g.pesoKg = s.pesoKg
+  if (s.reps != null) g.reps = s.reps
+  if (s.rir != null) g.rir = s.rir
+  return g
 }
 
 type Almacen = { leer: () => EstadoMemoria; escribir: (e: EstadoMemoria) => void }
@@ -175,6 +205,71 @@ export function crearRepositorioMemoria(): Repositorio {
       estado.comidas.push({ id, ...c })
       guardar()
       return id
+    },
+
+    async comidasDeFecha(fechaISO) {
+      return estado.comidas
+        .filter((c) => c.fecha === fechaISO)
+        .map<ComidaGuardada>((c) => {
+          const g: ComidaGuardada = { id: c.id, alimentoId: c.alimentoId, gramos: c.gramos, macros: macrosParciales(c), fecha: c.fecha }
+          if (c.comidaPlanId != null) g.comidaPlanId = c.comidaPlanId
+          return g
+        })
+    },
+    async borrarComidasDeHueco(fechaISO, comidaPlanId) {
+      estado.comidas = estado.comidas.filter((c) => !(c.fecha === fechaISO && c.comidaPlanId === comidaPlanId))
+      guardar()
+    },
+    async seriesDeFecha(fechaISO) {
+      return estado.series.filter((s) => s.fecha === fechaISO).map(aSerieGuardada)
+    },
+    async seriesDeSesion(sesionId) {
+      return estado.series.filter((s) => s.sesionId === sesionId).map(aSerieGuardada)
+    },
+    async ultimaSesionCompletada(sesionPlanId, antesDeFechaISO) {
+      const candidatas = estado.sesiones
+        .filter((s) => s.sesionPlanId === sesionPlanId && s.completada && s.fecha < antesDeFechaISO)
+        .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id)
+      const encontrada = candidatas[0]
+      if (!encontrada) return null
+      const g: SesionGuardada = { id: encontrada.id, fecha: encontrada.fecha, completada: encontrada.completada ?? false }
+      if (encontrada.planId != null) g.planId = encontrada.planId
+      if (encontrada.sesionPlanId != null) g.sesionPlanId = encontrada.sesionPlanId
+      if (encontrada.feedback) g.feedback = encontrada.feedback
+      if (encontrada.nota != null) g.nota = encontrada.nota
+      return g
+    },
+    async borrarSerie(id) {
+      estado.series = estado.series.filter((s) => s.id !== id)
+      guardar()
+    },
+    async sesionDelDia(fechaISO, sesionPlanId) {
+      const encontrada = [...estado.sesiones].reverse().find((s) => s.fecha === fechaISO && s.sesionPlanId === sesionPlanId)
+      if (!encontrada) return null
+      const g: SesionGuardada = { id: encontrada.id, fecha: encontrada.fecha, completada: encontrada.completada ?? false }
+      if (encontrada.planId != null) g.planId = encontrada.planId
+      if (encontrada.sesionPlanId != null) g.sesionPlanId = encontrada.sesionPlanId
+      if (encontrada.feedback) g.feedback = encontrada.feedback
+      if (encontrada.nota != null) g.nota = encontrada.nota
+      return g
+    },
+    async guardarFeedbackSesion(sesionId, feedback) {
+      const s = estado.sesiones.find((x) => x.id === sesionId)
+      if (s) {
+        s.feedback = feedback
+        s.completada = true
+      }
+      guardar()
+    },
+
+    async aguaDeFecha(fechaISO) {
+      return estado.agua[fechaISO] ?? 0
+    },
+    async registrarAgua(fechaISO, deltaMl) {
+      const total = Math.max(0, (estado.agua[fechaISO] ?? 0) + deltaMl)
+      estado.agua[fechaISO] = total
+      guardar()
+      return total
     },
 
     async registrarProgreso(p: NuevoProgreso) {

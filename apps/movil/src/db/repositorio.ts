@@ -51,6 +51,40 @@ export interface NuevaSesion {
   nota?: string
 }
 
+// Sensación con la que se cierra la sesión. Alimenta la progresión del motor en la siguiente.
+export type FeedbackSesion = 'facil' | 'ok' | 'dificil'
+
+export interface SesionGuardada {
+  id: number
+  planId?: number
+  sesionPlanId?: string
+  fecha: string
+  completada: boolean
+  feedback?: FeedbackSesion
+  nota?: string
+}
+
+export interface SerieGuardada {
+  id: number
+  sesionId: number
+  ejercicioId: string
+  numeroSerie: number
+  pesoKg?: number
+  reps?: number
+  rir?: number
+  completada: boolean
+  fecha: string
+}
+
+export interface ComidaGuardada {
+  id: number
+  comidaPlanId?: string
+  alimentoId: string
+  gramos: number
+  macros: Partial<Macros>
+  fecha: string
+}
+
 export interface NuevaSerie {
   sesionId: number
   ejercicioId: string
@@ -99,6 +133,27 @@ export interface Repositorio {
   registrarSesion(sesion: NuevaSesion): Promise<number>
   registrarSerie(serie: NuevaSerie): Promise<number>
   registrarComida(comida: NuevaComida): Promise<number>
+
+  // --- Lectura del día (para los anillos, el avance del entreno y el estado de las comidas) ---
+  comidasDeFecha(fechaISO: string): Promise<ComidaGuardada[]>
+  // Quita lo registrado de un hueco en un día (desmarcar una comida). Idempotente.
+  borrarComidasDeHueco(fechaISO: string, comidaPlanId: string): Promise<void>
+  seriesDeFecha(fechaISO: string): Promise<SerieGuardada[]>
+  // Sesión registrada de un día para una sesión del plan (si ya se empezó). Null si aún no.
+  sesionDelDia(fechaISO: string, sesionPlanId: string): Promise<SesionGuardada | null>
+  // Series de una sesión concreta, para reconstruir el estado de la última sesión del ejercicio.
+  seriesDeSesion(sesionId: number): Promise<SerieGuardada[]>
+  // Última sesión completada de esa sesión del plan antes de una fecha; alimenta la progresión.
+  ultimaSesionCompletada(sesionPlanId: string, antesDeFechaISO: string): Promise<SesionGuardada | null>
+  // Quita una serie registrada (al desmarcarla). Idempotente.
+  borrarSerie(id: number): Promise<void>
+  // Guarda la sensación de la sesión y la marca como completada. Alimenta la progresión.
+  guardarFeedbackSesion(sesionId: number, feedback: FeedbackSesion): Promise<void>
+
+  // --- Agua del día (se va sumando a lo largo del día) ---
+  aguaDeFecha(fechaISO: string): Promise<number>
+  // Suma (o resta, con delta negativo) ml al total del día y devuelve el total resultante.
+  registrarAgua(fechaISO: string, deltaMl: number): Promise<number>
 
   // --- Progreso corporal ---
   registrarProgreso(progreso: NuevoProgreso): Promise<void>

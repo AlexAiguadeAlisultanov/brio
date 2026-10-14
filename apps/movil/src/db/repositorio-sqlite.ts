@@ -1,11 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite'
 
-import type { AjusteSemanal, Objetivo, Perfil, Plan, RegistroProgreso } from '@brio/motor'
+import type { AjusteSemanal, Macros, Objetivo, Perfil, Plan, RegistroProgreso } from '@brio/motor'
 
 import { restablecerDatosLocales } from './migraciones'
 import {
   AJUSTES_APP_POR_DEFECTO,
   type AjustesApp,
+  type ComidaGuardada,
+  type FeedbackSesion,
   type NuevaComida,
   type NuevaRestriccion,
   type NuevaSerie,
@@ -14,6 +16,8 @@ import {
   type PlanGuardado,
   type Repositorio,
   type RestriccionGuardada,
+  type SerieGuardada,
+  type SesionGuardada,
   type Unidades,
 } from './repositorio'
 
@@ -53,6 +57,40 @@ interface FilaPlan {
 interface FilaProgreso {
   fecha: string
   peso_kg: number
+}
+interface FilaSesion {
+  id: number
+  plan_id: number | null
+  sesion_plan_id: string | null
+  fecha: string
+  completada: number
+  feedback: string | null
+  nota: string | null
+}
+interface FilaSerie {
+  id: number
+  sesion_id: number
+  ejercicio_id: string
+  numero_serie: number
+  peso_kg: number | null
+  reps: number | null
+  rir: number | null
+  completada: number
+  fecha: string
+}
+interface FilaComida {
+  id: number
+  comida_plan_id: string | null
+  alimento_id: string
+  gramos: number
+  kcal: number | null
+  proteina_g: number | null
+  grasa_g: number | null
+  carbos_g: number | null
+  fecha: string
+}
+interface FilaAgua {
+  ml: number
 }
 interface FilaAjustesApp {
   locale: string
@@ -232,6 +270,127 @@ export class RepositorioSQLite implements Repositorio {
       ahora(),
     )
     return res.lastInsertRowId
+  }
+
+  // --- Lectura del día ---
+
+  private mapearSerie(f: FilaSerie): SerieGuardada {
+    const s: SerieGuardada = {
+      id: f.id,
+      sesionId: f.sesion_id,
+      ejercicioId: f.ejercicio_id,
+      numeroSerie: f.numero_serie,
+      completada: aBool(f.completada),
+      fecha: f.fecha,
+    }
+    if (f.peso_kg != null) s.pesoKg = f.peso_kg
+    if (f.reps != null) s.reps = f.reps
+    if (f.rir != null) s.rir = f.rir
+    return s
+  }
+
+  async comidasDeFecha(fechaISO: string): Promise<ComidaGuardada[]> {
+    const filas = await this.db.getAllAsync<FilaComida>(
+      `SELECT id, comida_plan_id, alimento_id, gramos, kcal, proteina_g, grasa_g, carbos_g, fecha
+       FROM registro_comida WHERE fecha = ? ORDER BY id`,
+      fechaISO,
+    )
+    return filas.map((f) => {
+      const macros: Partial<Macros> = {}
+      if (f.kcal != null) macros.kcal = f.kcal
+      if (f.proteina_g != null) macros.proteinaG = f.proteina_g
+      if (f.grasa_g != null) macros.grasaG = f.grasa_g
+      if (f.carbos_g != null) macros.carbosG = f.carbos_g
+      const c: ComidaGuardada = { id: f.id, alimentoId: f.alimento_id, gramos: f.gramos, macros, fecha: f.fecha }
+      if (f.comida_plan_id != null) c.comidaPlanId = f.comida_plan_id
+      return c
+    })
+  }
+
+  async borrarComidasDeHueco(fechaISO: string, comidaPlanId: string): Promise<void> {
+    await this.db.runAsync('DELETE FROM registro_comida WHERE fecha = ? AND comida_plan_id = ?', fechaISO, comidaPlanId)
+  }
+
+  async seriesDeFecha(fechaISO: string): Promise<SerieGuardada[]> {
+    const filas = await this.db.getAllAsync<FilaSerie>(
+      `SELECT id, sesion_id, ejercicio_id, numero_serie, peso_kg, reps, rir, completada, fecha
+       FROM registro_serie WHERE fecha = ? ORDER BY id`,
+      fechaISO,
+    )
+    return filas.map((f) => this.mapearSerie(f))
+  }
+
+  async seriesDeSesion(sesionId: number): Promise<SerieGuardada[]> {
+    const filas = await this.db.getAllAsync<FilaSerie>(
+      `SELECT id, sesion_id, ejercicio_id, numero_serie, peso_kg, reps, rir, completada, fecha
+       FROM registro_serie WHERE sesion_id = ? ORDER BY id`,
+      sesionId,
+    )
+    return filas.map((f) => this.mapearSerie(f))
+  }
+
+  async ultimaSesionCompletada(sesionPlanId: string, antesDeFechaISO: string): Promise<SesionGuardada | null> {
+    const f = await this.db.getFirstAsync<FilaSesion>(
+      `SELECT id, plan_id, sesion_plan_id, fecha, completada, feedback, nota
+       FROM registro_sesion WHERE sesion_plan_id = ? AND completada = 1 AND fecha < ?
+       ORDER BY fecha DESC, id DESC LIMIT 1`,
+      sesionPlanId,
+      antesDeFechaISO,
+    )
+    if (!f) return null
+    const s: SesionGuardada = { id: f.id, fecha: f.fecha, completada: aBool(f.completada) }
+    if (f.plan_id != null) s.planId = f.plan_id
+    if (f.sesion_plan_id != null) s.sesionPlanId = f.sesion_plan_id
+    if (f.feedback === 'facil' || f.feedback === 'ok' || f.feedback === 'dificil') s.feedback = f.feedback
+    if (f.nota != null) s.nota = f.nota
+    return s
+  }
+
+  async borrarSerie(id: number): Promise<void> {
+    await this.db.runAsync('DELETE FROM registro_serie WHERE id = ?', id)
+  }
+
+  async sesionDelDia(fechaISO: string, sesionPlanId: string): Promise<SesionGuardada | null> {
+    const f = await this.db.getFirstAsync<FilaSesion>(
+      `SELECT id, plan_id, sesion_plan_id, fecha, completada, feedback, nota
+       FROM registro_sesion WHERE fecha = ? AND sesion_plan_id = ? ORDER BY id DESC LIMIT 1`,
+      fechaISO,
+      sesionPlanId,
+    )
+    if (!f) return null
+    const s: SesionGuardada = {
+      id: f.id,
+      fecha: f.fecha,
+      completada: aBool(f.completada),
+    }
+    if (f.plan_id != null) s.planId = f.plan_id
+    if (f.sesion_plan_id != null) s.sesionPlanId = f.sesion_plan_id
+    if (f.feedback === 'facil' || f.feedback === 'ok' || f.feedback === 'dificil') s.feedback = f.feedback
+    if (f.nota != null) s.nota = f.nota
+    return s
+  }
+
+  async guardarFeedbackSesion(sesionId: number, feedback: FeedbackSesion): Promise<void> {
+    await this.db.runAsync('UPDATE registro_sesion SET feedback = ?, completada = 1 WHERE id = ?', feedback, sesionId)
+  }
+
+  // --- Agua del día ---
+
+  async aguaDeFecha(fechaISO: string): Promise<number> {
+    const fila = await this.db.getFirstAsync<FilaAgua>('SELECT ml FROM registro_agua WHERE fecha = ?', fechaISO)
+    return fila?.ml ?? 0
+  }
+
+  async registrarAgua(fechaISO: string, deltaMl: number): Promise<number> {
+    await this.db.runAsync(
+      `INSERT INTO registro_agua (fecha, ml, actualizado_en) VALUES (?, MAX(0, ?), ?)
+       ON CONFLICT(fecha) DO UPDATE SET ml = MAX(0, ml + ?), actualizado_en = excluded.actualizado_en`,
+      fechaISO,
+      Math.max(0, deltaMl),
+      ahora(),
+      deltaMl,
+    )
+    return this.aguaDeFecha(fechaISO)
   }
 
   // --- Progreso corporal ---

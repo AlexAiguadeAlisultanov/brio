@@ -13,7 +13,7 @@
 export const NOMBRE_BASE = 'brio.db'
 
 // Versión del esquema. Sube de uno en uno; cada salto necesita su paso en migraciones.ts.
-export const VERSION_ESQUEMA = 1
+export const VERSION_ESQUEMA = 2
 
 // Creación completa del esquema en su versión 1.
 export const SQL_CREAR_V1 = `
@@ -125,6 +125,22 @@ CREATE INDEX IF NOT EXISTS idx_restriccion_activa ON restriccion (borrado);
 CREATE INDEX IF NOT EXISTS idx_plan_activo ON plan (activo);
 `
 
+// Versión 2: la sensación con la que se cierra una sesión (alimenta la progresión del motor)
+// y el agua bebida por día. El feedback va como columna de registro_sesion; el agua, en su
+// propia tabla de fila única por fecha para poder ir sumando sorbos a lo largo del día.
+export const SQL_CREAR_V2 = `
+ALTER TABLE registro_sesion ADD COLUMN feedback TEXT;
+
+CREATE TABLE IF NOT EXISTS registro_agua (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha TEXT NOT NULL UNIQUE,
+  ml INTEGER NOT NULL DEFAULT 0,
+  actualizado_en TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agua_fecha ON registro_agua (fecha);
+`
+
 // Nombres de todas las tablas, para poder restablecer los datos locales (ruta de rescate).
 export const TABLAS = [
   'perfil',
@@ -135,6 +151,7 @@ export const TABLAS = [
   'registro_serie',
   'registro_comida',
   'registro_progreso',
+  'registro_agua',
   'ajuste',
   'ajustes_app',
 ] as const

@@ -23,6 +23,8 @@ export default function LayoutRaiz() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="entreno" options={{ presentation: 'card' }} />
+
               </Stack>
             </I18nProvider>
           </ProveedorDatos>
