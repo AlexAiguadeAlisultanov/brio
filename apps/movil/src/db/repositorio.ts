@@ -110,6 +110,35 @@ export interface NuevoProgreso extends RegistroProgreso {
   nota?: string
 }
 
+// Mejor serie registrada de un ejercicio: la carga más alta, y con ella sus reps y la fecha.
+// Es un dato bruto del historial (el máximo de lo anotado), no un número del motor.
+export interface MarcaPersonal {
+  ejercicioId: string
+  pesoKg: number
+  reps?: number
+  fechaISO: string
+}
+
+// Reduce las series anotadas a la mejor marca por ejercicio: la de más carga y, a igual carga,
+// la de más reps y más reciente. Pura, para que los dos repositorios ordenen igual.
+export function reducirMarcas(filas: { ejercicioId: string; pesoKg: number; reps: number | null; fechaISO: string }[]): MarcaPersonal[] {
+  const mejor = new Map<string, MarcaPersonal>()
+  for (const f of filas) {
+    const actual = mejor.get(f.ejercicioId)
+    const gana =
+      !actual ||
+      f.pesoKg > actual.pesoKg ||
+      (f.pesoKg === actual.pesoKg && (f.reps ?? 0) > (actual.reps ?? 0)) ||
+      (f.pesoKg === actual.pesoKg && (f.reps ?? 0) === (actual.reps ?? 0) && f.fechaISO > actual.fechaISO)
+    if (gana) {
+      const m: MarcaPersonal = { ejercicioId: f.ejercicioId, pesoKg: f.pesoKg, fechaISO: f.fechaISO }
+      if (f.reps != null) m.reps = f.reps
+      mejor.set(f.ejercicioId, m)
+    }
+  }
+  return [...mejor.values()].sort((a, b) => b.pesoKg - a.pesoKg || a.ejercicioId.localeCompare(b.ejercicioId))
+}
+
 export interface Repositorio {
   // --- Perfil y objetivo (fila única) ---
   guardarPerfil(perfil: Perfil): Promise<void>
@@ -158,6 +187,16 @@ export interface Repositorio {
   // --- Progreso corporal ---
   registrarProgreso(progreso: NuevoProgreso): Promise<void>
   progresoEntre(desdeISO: string, hastaISO: string): Promise<RegistroProgreso[]>
+
+  // --- Adherencia (calendario y racha) ---
+  // Fechas con alguna actividad registrada (entreno hecho, serie o comida) dentro del rango.
+  diasConActividad(desdeISO: string, hastaISO: string): Promise<string[]>
+  // Mejor marca por ejercicio (carga máxima anotada), para la vista de PRs.
+  mejoresMarcas(): Promise<MarcaPersonal[]>
+  // Días congelados por el usuario: no cuentan en contra de la racha.
+  diasCongelados(desdeISO: string, hastaISO: string): Promise<string[]>
+  congelarDia(fechaISO: string): Promise<void>
+  descongelarDia(fechaISO: string): Promise<void>
 
   // --- Ajustes semanales del motor ---
   guardarAjuste(ajuste: AjusteSemanal, planId?: number): Promise<number>

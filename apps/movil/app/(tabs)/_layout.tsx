@@ -1,15 +1,11 @@
 import { Tabs } from 'expo-router'
-import { View, type ColorValue } from 'react-native'
+import { CalendarDays, Flame, TrendingUp, User } from 'lucide-react-native'
 
 import { useT } from '@/i18n'
 import { useTema } from '@/ui/proveedor'
 
 // Barra de pestañas inferior con los cuatro destinos de la app: Hoy, Plan, Progreso y Perfil.
-// Los iconos definitivos los pondrá app-designer; de momento un punto que toma el color activo.
-
-function PuntoPestana({ color }: { color: ColorValue }) {
-  return <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-}
+// Iconos de línea de Lucide, mismo grosor; el acento vive solo en la pestaña activa.
 
 export default function LayoutTabs() {
   const t = useT()
@@ -28,19 +24,19 @@ export default function LayoutTabs() {
       }}>
       <Tabs.Screen
         name="hoy"
-        options={{ title: t('tabs.hoy'), tabBarIcon: ({ color }) => <PuntoPestana color={color} /> }}
+        options={{ title: t('tabs.hoy'), tabBarIcon: ({ color }) => <Flame size={22} color={color} strokeWidth={2} /> }}
       />
       <Tabs.Screen
         name="plan"
-        options={{ title: t('tabs.plan'), tabBarIcon: ({ color }) => <PuntoPestana color={color} /> }}
+        options={{ title: t('tabs.plan'), tabBarIcon: ({ color }) => <CalendarDays size={22} color={color} strokeWidth={2} /> }}
       />
       <Tabs.Screen
         name="progreso"
-        options={{ title: t('tabs.progreso'), tabBarIcon: ({ color }) => <PuntoPestana color={color} /> }}
+        options={{ title: t('tabs.progreso'), tabBarIcon: ({ color }) => <TrendingUp size={22} color={color} strokeWidth={2} /> }}
       />
       <Tabs.Screen
         name="perfil"
-        options={{ title: t('tabs.perfil'), tabBarIcon: ({ color }) => <PuntoPestana color={color} /> }}
+        options={{ title: t('tabs.perfil'), tabBarIcon: ({ color }) => <User size={22} color={color} strokeWidth={2} /> }}
       />
     </Tabs>
   )

@@ -13,7 +13,7 @@
 export const NOMBRE_BASE = 'brio.db'
 
 // Versión del esquema. Sube de uno en uno; cada salto necesita su paso en migraciones.ts.
-export const VERSION_ESQUEMA = 2
+export const VERSION_ESQUEMA = 3
 
 // Creación completa del esquema en su versión 1.
 export const SQL_CREAR_V1 = `
@@ -141,6 +141,16 @@ CREATE TABLE IF NOT EXISTS registro_agua (
 CREATE INDEX IF NOT EXISTS idx_agua_fecha ON registro_agua (fecha);
 `
 
+// Versión 3: los días que el usuario congela en el calendario de adherencia. Un día congelado
+// no cuenta en contra de la racha (vacaciones, enfermedad, un descanso buscado). Es un gesto del
+// usuario, así que vive aparte y se puede quitar sin tocar nada más.
+export const SQL_CREAR_V3 = `
+CREATE TABLE IF NOT EXISTS dia_congelado (
+  fecha TEXT PRIMARY KEY,
+  creado_en TEXT NOT NULL
+);
+`
+
 // Nombres de todas las tablas, para poder restablecer los datos locales (ruta de rescate).
 export const TABLAS = [
   'perfil',
@@ -154,6 +164,7 @@ export const TABLAS = [
   'registro_agua',
   'ajuste',
   'ajustes_app',
+  'dia_congelado',
 ] as const
 
 // Borra todas las tablas. Se usa en el restablecimiento de datos locales y en el borrado RGPD.

@@ -27,3 +27,8 @@ export { HojaSustitucionComida } from './HojaSustitucionComida'
 export { HojaSustitucionEjercicio } from './HojaSustitucionEjercicio'
 export { HojaCheckin } from './HojaCheckin'
 export { HojaFeedbackSesion } from './HojaFeedbackSesion'
+
+// Fase 2B: plan de la semana, progreso y perfil.
+export { PantallaScroll } from './PantallaScroll'
+export { EstadoVacio } from './EstadoVacio'
+export { GraficoTendencia } from './GraficoTendencia'

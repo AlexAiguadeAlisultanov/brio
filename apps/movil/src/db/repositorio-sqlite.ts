@@ -8,6 +8,7 @@ import {
   type AjustesApp,
   type ComidaGuardada,
   type FeedbackSesion,
+  type MarcaPersonal,
   type NuevaComida,
   type NuevaRestriccion,
   type NuevaSerie,
@@ -19,6 +20,7 @@ import {
   type SerieGuardada,
   type SesionGuardada,
   type Unidades,
+  reducirMarcas,
 } from './repositorio'
 
 // Implementación de la capa de datos sobre expo-sqlite (dispositivo). Recibe la base ya
@@ -418,6 +420,56 @@ export class RepositorioSQLite implements Repositorio {
       hastaISO,
     )
     return filas.map((f) => ({ fechaISO: f.fecha, pesoKg: f.peso_kg }))
+  }
+
+  // --- Adherencia ---
+
+  async diasConActividad(desdeISO: string, hastaISO: string): Promise<string[]> {
+    const filas = await this.db.getAllAsync<{ fecha: string }>(
+      `SELECT DISTINCT fecha FROM (
+         SELECT fecha FROM registro_sesion WHERE completada = 1 AND fecha BETWEEN ? AND ?
+         UNION SELECT fecha FROM registro_serie WHERE fecha BETWEEN ? AND ?
+         UNION SELECT fecha FROM registro_comida WHERE fecha BETWEEN ? AND ?
+       ) ORDER BY fecha`,
+      desdeISO,
+      hastaISO,
+      desdeISO,
+      hastaISO,
+      desdeISO,
+      hastaISO,
+    )
+    return filas.map((f) => f.fecha)
+  }
+
+  async mejoresMarcas(): Promise<MarcaPersonal[]> {
+    // Lee las series con carga anotada y se queda, por ejercicio, con la de más peso (y a igual
+    // peso, la de más reps y más reciente). La reducción vive aquí, en la capa de datos.
+    const filas = await this.db.getAllAsync<{ ejercicio_id: string; peso_kg: number; reps: number | null; fecha: string }>(
+      `SELECT ejercicio_id, peso_kg, reps, fecha FROM registro_serie
+       WHERE completada = 1 AND peso_kg IS NOT NULL ORDER BY ejercicio_id, fecha`,
+    )
+    return reducirMarcas(filas.map((f) => ({ ejercicioId: f.ejercicio_id, pesoKg: f.peso_kg, reps: f.reps, fechaISO: f.fecha })))
+  }
+
+  async diasCongelados(desdeISO: string, hastaISO: string): Promise<string[]> {
+    const filas = await this.db.getAllAsync<{ fecha: string }>(
+      'SELECT fecha FROM dia_congelado WHERE fecha BETWEEN ? AND ? ORDER BY fecha',
+      desdeISO,
+      hastaISO,
+    )
+    return filas.map((f) => f.fecha)
+  }
+
+  async congelarDia(fechaISO: string): Promise<void> {
+    await this.db.runAsync(
+      'INSERT INTO dia_congelado (fecha, creado_en) VALUES (?, ?) ON CONFLICT(fecha) DO NOTHING',
+      fechaISO,
+      ahora(),
+    )
+  }
+
+  async descongelarDia(fechaISO: string): Promise<void> {
+    await this.db.runAsync('DELETE FROM dia_congelado WHERE fecha = ?', fechaISO)
   }
 
   // --- Ajustes semanales ---

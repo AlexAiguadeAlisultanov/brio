@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite'
 
-import { SQL_BORRAR_TODO, SQL_CREAR_V1, SQL_CREAR_V2, VERSION_ESQUEMA } from './esquema'
+import { SQL_BORRAR_TODO, SQL_CREAR_V1, SQL_CREAR_V2, SQL_CREAR_V3, VERSION_ESQUEMA } from './esquema'
 
 // Migraciones versionadas con PRAGMA user_version. Cada paso lleva a la base de una versión a
 // la siguiente dentro de una transacción. Si algo falla a mitad, en vez de dejar la app
@@ -24,6 +24,12 @@ const PASOS: PasoMigracion[] = [
     version: 2,
     aplicar: async (db) => {
       await db.execAsync(SQL_CREAR_V2)
+    },
+  },
+  {
+    version: 3,
+    aplicar: async (db) => {
+      await db.execAsync(SQL_CREAR_V3)
     },
   },
 ]

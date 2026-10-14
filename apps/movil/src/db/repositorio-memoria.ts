@@ -15,6 +15,7 @@ import {
   type RestriccionGuardada,
   type SerieGuardada,
   type SesionGuardada,
+  reducirMarcas,
 } from './repositorio'
 
 // Repositorio en memoria, con el MISMO contrato que el de SQLite. Se usa en web, donde
@@ -35,6 +36,7 @@ interface EstadoMemoria {
   progreso: NuevoProgreso[]
   ajustes: (AjusteSemanal & { id: number; planId?: number })[]
   agua: Record<string, number>
+  congelados: string[]
   ajustesApp: AjustesApp
   secuencia: number
 }
@@ -51,6 +53,7 @@ function estadoVacio(): EstadoMemoria {
     progreso: [],
     ajustes: [],
     agua: {},
+    congelados: [],
     ajustesApp: { ...AJUSTES_APP_POR_DEFECTO },
     secuencia: 0,
   }
@@ -283,6 +286,32 @@ export function crearRepositorioMemoria(): Repositorio {
         .filter((p) => p.fechaISO >= desdeISO && p.fechaISO <= hastaISO)
         .sort((a, b) => a.fechaISO.localeCompare(b.fechaISO))
         .map<RegistroProgreso>((p) => ({ fechaISO: p.fechaISO, pesoKg: p.pesoKg }))
+    },
+
+    async diasConActividad(desdeISO, hastaISO) {
+      const dentro = (f: string) => f >= desdeISO && f <= hastaISO
+      const dias = new Set<string>()
+      estado.sesiones.filter((s) => s.completada && dentro(s.fecha)).forEach((s) => dias.add(s.fecha))
+      estado.series.filter((s) => dentro(s.fecha)).forEach((s) => dias.add(s.fecha))
+      estado.comidas.filter((c) => dentro(c.fecha)).forEach((c) => dias.add(c.fecha))
+      return [...dias].sort()
+    },
+    async mejoresMarcas() {
+      const filas = estado.series
+        .filter((s) => (s.completada ?? false) && s.pesoKg != null)
+        .map((s) => ({ ejercicioId: s.ejercicioId, pesoKg: s.pesoKg as number, reps: s.reps ?? null, fechaISO: s.fecha }))
+      return reducirMarcas(filas)
+    },
+    async diasCongelados(desdeISO, hastaISO) {
+      return estado.congelados.filter((f) => f >= desdeISO && f <= hastaISO).sort()
+    },
+    async congelarDia(fechaISO) {
+      if (!estado.congelados.includes(fechaISO)) estado.congelados.push(fechaISO)
+      guardar()
+    },
+    async descongelarDia(fechaISO) {
+      estado.congelados = estado.congelados.filter((f) => f !== fechaISO)
+      guardar()
     },
 
     async guardarAjuste(a: AjusteSemanal, planId?: number) {
