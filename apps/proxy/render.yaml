@@ -1,0 +1,21 @@
+# Despliegue del proxy de Brío en Render (runtime docker, contexto = raíz del monorepo).
+# La app móvil apunta aquí con EXPO_PUBLIC_API_URL. La clave de la API vive solo en Render
+# (sync:false): sin ella, el proxy responde 503 {fallback:true} y la app usa su motor local.
+services:
+  - type: web
+    name: brio-proxy
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: apps/proxy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/salud
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MODELO_LLM
+        value: claude-opus-5-5
+      - key: ORIGEN_PERMITIDO
+        sync: false
+      - key: TOPE_PETICIONES_DIA
+        value: "500"

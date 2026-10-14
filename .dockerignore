@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.expo
+**/.expo
+web-build
+**/web-build
+.git
+coverage
+**/coverage
+*.log
+.env
+**/.env
