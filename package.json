@@ -1,0 +1,16 @@
+{
+  "name": "brio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Brío: planificador de entrenamiento y alimentación con motor determinista y adaptación por IA.",
+  "license": "MIT",
+  "author": "Alex Aiguadé Alisultanov",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test -w @brio/motor",
+    "comprobar": "npm run comprobar -w @brio/motor"
+  }
+}
