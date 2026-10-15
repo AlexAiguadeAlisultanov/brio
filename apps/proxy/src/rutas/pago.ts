@@ -22,6 +22,11 @@ export const rutaPago = Router()
 
 const CuerpoCheckout = z.object({ modo: z.enum(['suscripcion', 'pase']) })
 
+// A dónde vuelve el navegador tras pagar o cancelar, si no se configura URL_EXITO/URL_CANCELAR.
+// El usuario cierra el navegador y la app recomprueba el premium al volver, así que basta con
+// una página real (no un marcador roto). Stripe NO admite success_url vacío.
+const PAGINA_TRAS_PAGO = 'https://alexaiguadealisultanov.github.io/brio/'
+
 // Los métodos de pago (tarjeta para la suscripción; tarjeta y Bizum para el pase) se
 // gestionan desde el Dashboard de Stripe (dynamic payment methods). La API ya no acepta
 // payment_method_types al crear la sesión: Checkout ofrece los métodos activados que encajen
@@ -58,8 +63,10 @@ rutaPago.post('/api/pago/checkout', requiereAuth, async (req, res) => {
   const { modo } = parseo.data
   const usuario = req.usuario!
 
-  const exito = process.env.URL_EXITO ?? 'https://example.com/pago/ok'
-  const cancelar = process.env.URL_CANCELAR ?? 'https://example.com/pago/cancelado'
+  // ?.trim() || en vez de ?? para que una variable VACÍA ('') también use el valor por
+  // defecto: Stripe rechaza un success_url/cancel_url vacío.
+  const exito = process.env.URL_EXITO?.trim() || PAGINA_TRAS_PAGO
+  const cancelar = process.env.URL_CANCELAR?.trim() || PAGINA_TRAS_PAGO
 
   try {
     const customer = await asegurarCliente(stripe, usuario.id, usuario.email)
@@ -135,7 +142,7 @@ rutaPago.post('/api/pago/portal', requiereAuth, async (req, res) => {
     res.status(409).json({ error: 'sin_cliente' })
     return
   }
-  const retorno = process.env.URL_EXITO ?? 'https://example.com/perfil'
+  const retorno = process.env.URL_EXITO?.trim() || PAGINA_TRAS_PAGO
   try {
     const sesion = await stripe.billingPortal.sessions.create({
       customer: registro.stripe_customer_id,
