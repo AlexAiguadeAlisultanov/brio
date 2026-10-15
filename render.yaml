@@ -1,0 +1,60 @@
+# Blueprint de Render para Brío: dos servicios.
+#   1) brio-backend: la API (cuentas, pagos con Stripe, IA). Docker, contexto = raíz.
+#   2) brio-web: la versión web/PC (SPA de Expo), estática.
+# Al conectar el repo en Render como Blueprint, lee este fichero. Las claves (Stripe, Claude,
+# token de sesión) las pones TÚ en el panel (marcadas sync:false). La web se construye
+# apuntando al backend con EXPO_PUBLIC_API_URL (ponle la URL de brio-backend tras desplegarlo).
+services:
+  - type: web
+    name: brio-backend
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: apps/proxy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/salud
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MODELO_LLM
+        value: claude-opus-5-5
+      - key: TOPE_PETICIONES_DIA
+        value: "500"
+      - key: DB_PATH
+        value: ./datos/brio.db
+      - key: TOKEN_SECRETO
+        generateValue: true
+      - key: DIAS_SESION
+        value: "30"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: PRECIO_CENTIMOS
+        value: "499"
+      - key: MONEDA
+        value: eur
+      - key: URL_EXITO
+        sync: false
+      - key: URL_CANCELAR
+        sync: false
+      - key: ORIGEN_PERMITIDO
+        sync: false
+
+  - type: web
+    name: brio-web
+    runtime: static
+    buildCommand: npm ci && cd apps/movil && npx expo export --platform web
+    staticPublishPath: apps/movil/dist
+    # SPA: todas las rutas sirven index.html (expo-router resuelve en cliente).
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Dirección del backend. Ponla con la URL de brio-backend (https://...onrender.com)
+      # para que el login y el pago funcionen desde la web.
+      - key: EXPO_PUBLIC_API_URL
+        sync: false
