@@ -17,11 +17,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   icon: './assets/images/icon.png',
   android: {
+    package: 'com.alexaiguade.brio',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundColor: ACENTO,
     },
     predictiveBackGestureEnabled: false,
+  },
+  ios: {
+    bundleIdentifier: 'com.alexaiguade.brio',
   },
   web: {
     // SPA: una sola página que resuelve el router en cliente.
@@ -48,7 +52,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
-    // Pasarela del proxy del LLM. Vacía por ahora; las pantallas aún no la consultan.
+    // Pasarela del backend (cuentas, pagos e IA). Se fija por entorno en cada build.
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? '',
+    // Proyecto de EAS (builds en la nube). Lo conecta `eas init --id`.
+    eas: { projectId: '5c833e8d-5fde-4d7a-baac-dadeee648347' },
   },
 })
