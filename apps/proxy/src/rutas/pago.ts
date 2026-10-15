@@ -21,12 +21,11 @@ export const rutaPago = Router()
 
 const CuerpoCheckout = z.object({ modo: z.enum(['suscripcion', 'pase']) })
 
-// payment_method_types sigue siendo un campo válido y estable de la API de Stripe, pero las
-// últimas versiones de los tipos del SDK lo omiten (prefieren allowed_payment_method_types).
-// Lo añadimos por intersección para fijar explícitamente los métodos (tarjeta / Bizum).
-type ParamsCheckout = Stripe.Checkout.SessionCreateParams & {
-  payment_method_types?: Array<'card' | 'bizum'>
-}
+// Los métodos de pago (tarjeta para la suscripción; tarjeta y Bizum para el pase) se
+// gestionan desde el Dashboard de Stripe (dynamic payment methods). La API ya no acepta
+// payment_method_types al crear la sesión: Checkout ofrece los métodos activados que encajen
+// con el modo (en 'subscription' solo los recurrentes como tarjeta; en 'payment' también
+// Bizum si está activado para euros).
 
 // Fecha ISO de dentro de N días.
 function dentroDeDias(dias: number): string {
@@ -78,10 +77,9 @@ rutaPago.post('/api/pago/checkout', requiereAuth, async (req, res) => {
               product_data: { name: 'Brío Premium (mensual)' },
             },
           }
-      const params: ParamsCheckout = {
+      const params: Stripe.Checkout.SessionCreateParams = {
         mode: 'subscription',
         customer,
-        payment_method_types: ['card'],
         line_items: [lineItem],
         success_url: exito,
         cancel_url: cancelar,
@@ -93,10 +91,9 @@ rutaPago.post('/api/pago/checkout', requiereAuth, async (req, res) => {
     }
 
     // Pase de un solo pago: tarjeta o Bizum. Da 30 días de premium al completarse.
-    const params: ParamsCheckout = {
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       customer,
-      payment_method_types: ['card', 'bizum'],
       line_items: [
         {
           quantity: 1,
@@ -116,6 +113,32 @@ rutaPago.post('/api/pago/checkout', requiereAuth, async (req, res) => {
   } catch {
     // No filtramos el detalle del error de Stripe al cliente ni al log.
     res.status(502).json({ error: 'pago_no_disponible' })
+  }
+})
+
+// Abre el portal de cliente de Stripe para que el usuario gestione o cancele su suscripción.
+// Al cancelar, el webhook customer.subscription.deleted le quita el premium. Requiere tener
+// configurado el Customer Portal en el Dashboard de Stripe (una vez).
+rutaPago.post('/api/pago/portal', requiereAuth, async (req, res) => {
+  const stripe = obtenerStripe()
+  if (!hayStripe() || !stripe) {
+    res.status(503).json({ sinPago: true })
+    return
+  }
+  const registro = obtenerUsuarioPorId(req.usuario!.id)
+  if (!registro?.stripe_customer_id) {
+    res.status(409).json({ error: 'sin_cliente' })
+    return
+  }
+  const retorno = process.env.URL_EXITO ?? 'https://example.com/perfil'
+  try {
+    const sesion = await stripe.billingPortal.sessions.create({
+      customer: registro.stripe_customer_id,
+      return_url: retorno,
+    })
+    res.json({ url: sesion.url })
+  } catch {
+    res.status(502).json({ error: 'portal_no_disponible' })
   }
 })
 

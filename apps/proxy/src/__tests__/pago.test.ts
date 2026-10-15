@@ -91,7 +91,8 @@ describe('POST /api/pago/checkout', () => {
     expect(res.body.url).toBe('https://stripe.test/checkout')
     const params = fakeStripe.checkout.sessions.create.mock.calls[0]![0]
     expect(params.mode).toBe('subscription')
-    expect(params.payment_method_types).toEqual(['card'])
+    // Los métodos de pago los gestiona el Dashboard de Stripe: no se pasa payment_method_types.
+    expect(params.payment_method_types).toBeUndefined()
   })
 
   it('pase crea sesión de pago único con tarjeta y bizum', async () => {
@@ -103,7 +104,8 @@ describe('POST /api/pago/checkout', () => {
     expect(res.status).toBe(200)
     const params = fakeStripe.checkout.sessions.create.mock.calls[0]![0]
     expect(params.mode).toBe('payment')
-    expect(params.payment_method_types).toEqual(['card', 'bizum'])
+    // Bizum se ofrece automáticamente si está activado en el Dashboard; no se fija aquí.
+    expect(params.payment_method_types).toBeUndefined()
   })
 })
 
