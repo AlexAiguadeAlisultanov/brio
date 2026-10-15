@@ -42,6 +42,14 @@ services:
         sync: false
       - key: ORIGEN_PERMITIDO
         sync: false
+      # Base persistente en Turso. SIN estas dos el proxy cae a un fichero SQLite local, que en
+      # Render es efímero y pierde cuentas y suscripciones en cada redespliegue. Son obligatorias.
+      #   BRIO_DB_URL   -> `turso db show brio --url`   (empieza por libsql://)
+      #   BRIO_DB_TOKEN -> `turso db tokens create brio`
+      - key: BRIO_DB_URL
+        sync: false
+      - key: BRIO_DB_TOKEN
+        sync: false
 
   - type: web
     name: brio-web
