@@ -24,6 +24,9 @@ export interface AjustesApp {
   avisoAceptado: boolean
   rachaDias: number
   consentimientoLlm: boolean
+  // Fecha ISO en que el usuario aceptó los términos y la renovación automática antes de pagar.
+  // null mientras no los haya aceptado.
+  terminosAceptadosEn: string | null
 }
 
 export const AJUSTES_APP_POR_DEFECTO: AjustesApp = {
@@ -32,6 +35,7 @@ export const AJUSTES_APP_POR_DEFECTO: AjustesApp = {
   avisoAceptado: false,
   rachaDias: 0,
   consentimientoLlm: false,
+  terminosAceptadosEn: null,
 }
 
 export interface PlanGuardado {

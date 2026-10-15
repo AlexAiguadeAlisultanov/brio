@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { AccessibilityInfo, Animated, Platform, Text, type TextProps, type TextStyle } from 'react-native'
 import * as Haptics from 'expo-haptics'
 
+import { familiaPorPeso } from '@/ui/tema'
 import { useTema } from '@/ui/proveedor'
 
 // Primitivas que comparten todos los componentes de Brío: tipografía, lectura de la
 // preferencia de movimiento reducido y una pulsación suave. Viven aquí para que cada
 // componente no repita lo mismo y todas las pantallas hablen el mismo lenguaje visual.
 
-type Variante = 'titulo' | 'seccion' | 'cuerpo' | 'etiqueta' | 'pie'
+type Variante = 'display' | 'titulo' | 'seccion' | 'cuerpo' | 'etiqueta' | 'pie'
 type Tono = 'principal' | 'secundario' | 'acento' | 'sobreAcento' | 'exito' | 'precaucion' | 'bloqueo'
 
 interface TextoProps extends TextProps {
@@ -43,11 +44,16 @@ export function Texto({
           ? colores.sobreAcento
           : colores[tono]
 
+  // Un texto "fuerte" sube de peso sin cambiar de tamaño; el display y el título ya nacen en
+  // bold. La familia de Sora se elige por ese peso para que Android no finja el grosor.
+  const peso = fuerte && base.peso === '400' ? '600' : base.peso
   const estilo: TextStyle = {
     color,
+    fontFamily: familiaPorPeso(peso),
     fontSize: base.tamano,
     lineHeight: base.interlineado,
-    fontWeight: fuerte ? '600' : base.peso,
+    fontWeight: peso,
+    letterSpacing: base.tracking,
   }
   if (numerico) estilo.fontVariant = ['tabular-nums']
   if (centrado) estilo.textAlign = 'center'

@@ -8,12 +8,14 @@ import {
   ControlSegmentado,
   EstadoVacio,
   HojaInferior,
+  MuroPremium,
   PantallaScroll,
   Texto,
   numero,
   tocar,
   type OpcionSegmento,
 } from '@/componentes'
+import { useAuth } from '@/auth/contexto'
 import { nombreAlimento, nombreEjercicio } from '@/datos/nombres'
 import { useRepositorio } from '@/db/provider'
 import { sesionDeHoy } from '@/dia/logica'
@@ -36,6 +38,7 @@ export default function PlanTab() {
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale } = useLocale()
+  const { esPremium } = useAuth()
 
   const [cargando, setCargando] = useState(true)
   const [plan, setPlan] = useState<Plan | null>(null)
@@ -199,7 +202,11 @@ export default function PlanTab() {
             )}
           </View>
 
-          {compra.length > 0 ? (
+          {compra.length > 0 && !esPremium ? (
+            <MuroPremium titulo={t('muro.compra.titulo')} texto={t('muro.compra.texto')} onAbrir={() => router.push('/premium')} />
+          ) : null}
+
+          {compra.length > 0 && esPremium ? (
             <View style={{ gap: espaciado.dos }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: espaciado.uno }}>
                 <ShoppingBasket size={20} color={colores.acentoContraste} strokeWidth={2} />

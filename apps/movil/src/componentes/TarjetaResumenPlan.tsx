@@ -1,9 +1,11 @@
 import { View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { Dumbbell, Flame } from 'lucide-react-native'
 import type { Plan } from '@brio/motor'
 
 import { useLocale, useT } from '@/i18n'
 import type { ClaveI18n } from '@/i18n/es'
+import { GRADIENTES } from '@/ui/tema'
 import { useTema } from '@/ui/proveedor'
 
 import { Texto } from './base'
@@ -34,13 +36,17 @@ export function TarjetaResumenPlan({ plan }: { plan: Plan }) {
   return (
     <View style={{ gap: espaciado.dos }}>
       {energia ? (
-        <View
+        <LinearGradient
+          colors={GRADIENTES.tarjetaOscura}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={{
             flexDirection: 'row',
             gap: espaciado.dos,
             padding: espaciado.tres,
             borderRadius: radios.l,
-            backgroundColor: colores.tarjeta,
+            borderWidth: 1,
+            borderColor: colores.borde,
             alignItems: 'center',
           }}>
           <View
@@ -70,7 +76,7 @@ export function TarjetaResumenPlan({ plan }: { plan: Plan }) {
               {t('plan.tuGasto')} {numero(energia.tdee, locale)} {t('comun.kcal')}
             </Texto>
           </View>
-        </View>
+        </LinearGradient>
       ) : null}
 
       {macros ? (

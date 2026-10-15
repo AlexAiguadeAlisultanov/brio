@@ -1,22 +1,25 @@
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Pressable, Switch, View } from 'react-native'
-import { Trash2 } from 'lucide-react-native'
+import { Sparkles, Trash2 } from 'lucide-react-native'
 import { VERSION_MOTOR, generarPlan, type Objetivo, type Perfil } from '@brio/motor'
 
 import {
   AvisoMedico,
+  BotonPrimario,
   BotonTexto,
   ChipRestriccion,
   ControlSegmentado,
   EstadoVacio,
   HojaInferior,
+  InsigniaPremium,
   PantallaScroll,
   Texto,
   numero,
   tocar,
   type OpcionSegmento,
 } from '@/componentes'
+import { useAuth } from '@/auth/contexto'
 import type { AjustesApp, RestriccionGuardada, Unidades } from '@/db/repositorio'
 import { AJUSTES_APP_POR_DEFECTO } from '@/db/repositorio'
 import { useRepositorio } from '@/db/provider'
@@ -32,12 +35,24 @@ import { useTema } from '@/ui/proveedor'
 
 const OBJETIVOS: Objetivo[] = ['ganar_musculo', 'perder_grasa', 'mantenimiento', 'fuerza']
 
+// Fecha corta para enseñar hasta cuándo dura el premium. Sin Intl para no depender del ICU del
+// dispositivo: día/mes/año en es-ca, año-mes-día en inglés.
+function fechaCorta(iso: string, locale: 'es' | 'ca' | 'en'): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = d.getFullYear()
+  return locale === 'en' ? `${yy}-${mm}-${dd}` : `${dd}/${mm}/${yy}`
+}
+
 export default function Perfil() {
   const repo = useRepositorio()
   const router = useRouter()
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale, cambiarLocale } = useLocale()
+  const { usuario, esPremium, salir } = useAuth()
 
   const [cargando, setCargando] = useState(true)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
@@ -64,6 +79,11 @@ export default function Perfil() {
 
   const cambiarObjetivo = async (nuevo: Objetivo) => {
     if (!perfil || nuevo === objetivo) return
+    // Cambiar de objetivo recalcula el plan: es premium. Sin premium, al muro.
+    if (!esPremium) {
+      router.push('/premium')
+      return
+    }
     tocar()
     setObjetivo(nuevo)
     const plan = generarPlan(perfil, nuevo)
@@ -95,6 +115,13 @@ export default function Perfil() {
     router.replace('/onboarding/bienvenida')
   }
 
+  const cerrarSesion = async () => {
+    tocar()
+    await salir()
+    // Al salir, el índice vuelve a decidir: sin sesión, lleva al stack de acceso.
+    router.replace('/')
+  }
+
   if (cargando) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.fondo }}>
@@ -118,9 +145,34 @@ export default function Perfil() {
   const unidadesOpciones: OpcionSegmento<Unidades>[] = (['metrico', 'imperial'] as const).map((u) => ({ valor: u, etiqueta: t(`unidades.${u}` as ClaveI18n) }))
 
   const restricciones = etiquetasDuras(perfil, duras, t)
+  const premiumHasta = usuario?.premiumHasta ? fechaCorta(usuario.premiumHasta, locale) : null
 
   return (
     <PantallaScroll titulo={t('perfil.titulo')} onRefresh={cargar}>
+      {/* Tu cuenta: correo, plan y acceso al muro o a gestionar la suscripción. */}
+      <Seccion titulo={t('perfil.cuenta.titulo')}>
+        <View style={{ padding: espaciado.dos, borderRadius: radios.l, backgroundColor: colores.tarjeta, gap: espaciado.dos }}>
+          {usuario?.email ? <FilaDato etiqueta={t('acceso.email')} valor={usuario.email} /> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Texto tono="secundario">{esPremium ? t('perfil.cuenta.planPremium') : t('perfil.cuenta.planGratis')}</Texto>
+            {esPremium ? <InsigniaPremium texto={t('premium.insignia')} /> : null}
+          </View>
+          <Texto variante="etiqueta" tono="secundario">
+            {esPremium ? t('perfil.cuenta.premiumApoyo') : t('perfil.cuenta.gratisApoyo')}
+          </Texto>
+          {esPremium && premiumHasta ? (
+            <Texto variante="etiqueta" style={{ color: colores.oro }} numerico>
+              {t('perfil.cuenta.premiumHasta').replace('{fecha}', premiumHasta)}
+            </Texto>
+          ) : null}
+        </View>
+        {esPremium ? (
+          <BotonTexto texto={t('perfil.cuenta.gestionar')} onPress={() => router.push('/premium')} />
+        ) : (
+          <BotonPrimario texto={t('perfil.cuenta.haztePremium')} tono="oro" icono={Sparkles} onPress={() => router.push('/premium')} />
+        )}
+      </Seccion>
+
       {/* Datos del cuerpo. */}
       <Seccion titulo={t('perfil.cuerpo.titulo')}>
         <View style={{ padding: espaciado.dos, borderRadius: radios.l, backgroundColor: colores.tarjeta, gap: espaciado.uno }}>
@@ -132,9 +184,10 @@ export default function Perfil() {
         <BotonTexto texto={t('perfil.cuerpo.rehacer')} onPress={() => router.replace('/onboarding/bienvenida')} />
       </Seccion>
 
-      {/* Objetivo. */}
+      {/* Objetivo. Cambiarlo recalcula el plan: premium. */}
       <Seccion titulo={t('perfil.objetivo.titulo')} apoyo={t('perfil.objetivo.apoyo')}>
         <ControlSegmentado opciones={objetivoOpciones} valor={objetivo ?? undefined} onChange={(o) => void cambiarObjetivo(o)} />
+        {esPremium ? null : <InsigniaPremium texto={t('premium.insignia')} />}
         {mensajeObjetivo ? (
           <Texto variante="etiqueta" tono="exito">
             {mensajeObjetivo}
@@ -165,54 +218,29 @@ export default function Perfil() {
         <ControlSegmentado opciones={unidadesOpciones} valor={ajustes.unidades} onChange={(u) => void cambiarUnidades(u)} />
       </Seccion>
 
-      {/* Suscripción (maqueta). */}
-      <Seccion titulo={t('perfil.suscripcion.titulo')}>
-        <View style={{ padding: espaciado.dos, borderRadius: radios.l, backgroundColor: colores.tarjeta, gap: espaciado.media }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Texto fuerte>{t('perfil.suscripcion.plan')}</Texto>
-            <View style={{ paddingVertical: 2, paddingHorizontal: espaciado.uno, borderRadius: radios.s, backgroundColor: colores.acento + '24' }}>
-              <Texto variante="pie" fuerte style={{ color: colores.acentoContraste }}>
-                {t('comun.hecho')}
+      {/* Consentimiento de IA: opt-in, apagado de serie. Solo cuenta si eres premium, que es
+          quien usa la vía IA; por eso se muestra solo ahí. */}
+      {esPremium ? (
+        <Seccion titulo={t('perfil.ia.titulo')}>
+          <View style={{ padding: espaciado.dos, borderRadius: radios.l, backgroundColor: colores.tarjeta, gap: espaciado.uno }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espaciado.dos }}>
+              <Texto fuerte style={{ flex: 1 }}>
+                {ajustes.consentimientoLlm ? t('perfil.ia.activado') : t('perfil.ia.desactivado')}
               </Texto>
+              <Switch
+                value={ajustes.consentimientoLlm}
+                onValueChange={(v) => void cambiarConsentimiento(v)}
+                trackColor={{ false: colores.borde, true: colores.acento }}
+                thumbColor={colores.texto}
+                ios_backgroundColor={colores.borde}
+              />
             </View>
-          </View>
-          <Texto variante="etiqueta" tono="secundario">
-            {t('perfil.suscripcion.planApoyo')}
-          </Texto>
-        </View>
-        <View style={{ padding: espaciado.dos, borderRadius: radios.l, borderWidth: 1, borderColor: colores.borde, gap: espaciado.media }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Texto fuerte>{t('perfil.suscripcion.pro')}</Texto>
-            <Texto variante="pie" tono="secundario">
-              {t('perfil.suscripcion.proximamente')}
+            <Texto variante="etiqueta" tono="secundario">
+              {t('perfil.ia.apoyo')}
             </Texto>
           </View>
-          <Texto variante="etiqueta" tono="secundario">
-            {t('perfil.suscripcion.proApoyo')}
-          </Texto>
-        </View>
-      </Seccion>
-
-      {/* Consentimiento de IA: opt-in, apagado de serie. */}
-      <Seccion titulo={t('perfil.ia.titulo')}>
-        <View style={{ padding: espaciado.dos, borderRadius: radios.l, backgroundColor: colores.tarjeta, gap: espaciado.uno }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espaciado.dos }}>
-            <Texto fuerte style={{ flex: 1 }}>
-              {ajustes.consentimientoLlm ? t('perfil.ia.activado') : t('perfil.ia.desactivado')}
-            </Texto>
-            <Switch
-              value={ajustes.consentimientoLlm}
-              onValueChange={(v) => void cambiarConsentimiento(v)}
-              trackColor={{ false: colores.borde, true: colores.acento }}
-              thumbColor={colores.texto}
-              ios_backgroundColor={colores.borde}
-            />
-          </View>
-          <Texto variante="etiqueta" tono="secundario">
-            {t('perfil.ia.apoyo')}
-          </Texto>
-        </View>
-      </Seccion>
+        </Seccion>
+      ) : null}
 
       {/* Borrar todos mis datos y cerrar sesión. */}
       <Seccion titulo={t('perfil.borrar.titulo')} apoyo={t('perfil.borrar.apoyo')}>
@@ -238,7 +266,7 @@ export default function Perfil() {
           </Texto>
         </Pressable>
         <View style={{ alignItems: 'center' }}>
-          <BotonTexto texto={t('perfil.cerrarSesion')} onPress={() => router.replace('/onboarding/bienvenida')} />
+          <BotonTexto texto={t('perfil.cerrarSesion')} onPress={() => void cerrarSesion()} />
         </View>
       </Seccion>
 

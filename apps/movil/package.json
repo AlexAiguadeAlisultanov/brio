@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "@brio/motor": "*",
+    "@expo-google-fonts/sora": "^0.4.2",
     "@expo/ui": "~57.0.24",
     "expo": "~57.0.29",
     "expo-constants": "~57.0.22",
@@ -13,6 +14,7 @@
     "expo-glass-effect": "~57.0.4",
     "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.13",
     "expo-localization": "~57.0.2",
     "expo-router": "~57.0.27",

@@ -32,3 +32,8 @@ export { HojaFeedbackSesion } from './HojaFeedbackSesion'
 export { PantallaScroll } from './PantallaScroll'
 export { EstadoVacio } from './EstadoVacio'
 export { GraficoTendencia } from './GraficoTendencia'
+
+// Cuentas y premium.
+export { Hero } from './Hero'
+export { CampoTexto } from './CampoTexto'
+export { InsigniaPremium, MuroPremium } from './premium'

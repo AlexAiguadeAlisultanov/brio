@@ -11,12 +11,14 @@ import {
   BotonPrimario,
   HojaCheckin,
   HojaSustitucionComida,
+  InsigniaPremium,
   SenalesDeParada,
   TarjetaComida,
   Texto,
   numero,
   tocar,
 } from '@/componentes'
+import { useAuth } from '@/auth/contexto'
 import { nombreAlimento } from '@/datos/nombres'
 import type { ComidaGuardada, SerieGuardada } from '@/db/repositorio'
 import { useRepositorio } from '@/db/provider'
@@ -34,6 +36,7 @@ export default function Hoy() {
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale } = useLocale()
+  const { esPremium } = useAuth()
   const insets = useSafeAreaInsets()
   const hoy = fechaISO()
 
@@ -280,13 +283,15 @@ export default function Hoy() {
             accessibilityRole="button"
             onPress={() => {
               tocar()
-              setCheckinAbierto(true)
+              if (esPremium) setCheckinAbierto(true)
+              else router.push('/premium')
             }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: espaciado.dos, padding: espaciado.dos, borderRadius: radios.m, borderWidth: 1, borderColor: colores.borde }}>
             <LineChart size={20} color={colores.textoSecundario} strokeWidth={2} />
             <Texto fuerte style={{ flex: 1 }}>
               {t('checkin.titulo')}
             </Texto>
+            {esPremium ? null : <InsigniaPremium texto={t('premium.insignia')} />}
             <ChevronRight size={20} color={colores.textoSecundario} strokeWidth={2} />
           </Pressable>
         ) : null}

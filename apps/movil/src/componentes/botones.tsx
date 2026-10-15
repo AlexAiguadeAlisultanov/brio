@@ -1,13 +1,16 @@
 import { ActivityIndicator, Animated, Pressable, View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import type { LucideIcon } from 'lucide-react-native'
 
+import { GRADIENTES } from '@/ui/tema'
 import { useTema } from '@/ui/proveedor'
 
 import { Texto, tocar, usePulsacion } from './base'
 
 // Botones de Brío. Una sola acción primaria por pantalla (botón relleno en acento); el resto
 // de acciones van en el secundario de contorno. El acento vive solo aquí y en los estados
-// seleccionados, nunca como fondo de pantalla.
+// seleccionados, nunca como fondo de pantalla. El relleno es un degradado de dos paradas del
+// mismo naranja: aporta profundidad sin dejar de ser un único acento.
 
 interface BotonProps {
   texto: string
@@ -15,12 +18,15 @@ interface BotonProps {
   desactivado?: boolean
   cargando?: boolean
   icono?: LucideIcon
+  // Variante dorada para la única acción de pago del muro premium.
+  tono?: 'marca' | 'oro'
 }
 
-export function BotonPrimario({ texto, onPress, desactivado, cargando, icono: Icono }: BotonProps) {
+export function BotonPrimario({ texto, onPress, desactivado, cargando, icono: Icono, tono = 'marca' }: BotonProps) {
   const { colores, espaciado, radios } = useTema()
   const { escala, aMin, aMax } = usePulsacion()
   const inerte = desactivado || cargando
+  const degradado = tono === 'oro' ? GRADIENTES.oro : GRADIENTES.marca
 
   return (
     <Animated.View style={{ transform: [{ scale: escala }] }}>
@@ -34,28 +40,31 @@ export function BotonPrimario({ texto, onPress, desactivado, cargando, icono: Ic
           tocar('ligero')
           onPress()
         }}
-        style={{
-          backgroundColor: colores.acento,
-          borderRadius: radios.m,
-          minHeight: 52,
-          paddingVertical: espaciado.dos,
-          paddingHorizontal: espaciado.tres,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: espaciado.uno,
-          opacity: inerte ? 0.4 : 1,
-        }}>
-        {cargando ? (
-          <ActivityIndicator color={colores.sobreAcento} />
-        ) : (
-          <>
-            {Icono ? <Icono size={20} color={colores.sobreAcento} strokeWidth={2} /> : null}
-            <Texto tono="sobreAcento" fuerte>
-              {texto}
-            </Texto>
-          </>
-        )}
+        style={{ borderRadius: radios.m, opacity: inerte ? 0.4 : 1, overflow: 'hidden' }}>
+        <LinearGradient
+          colors={degradado}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            minHeight: 52,
+            paddingVertical: espaciado.dos,
+            paddingHorizontal: espaciado.tres,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: espaciado.uno,
+          }}>
+          {cargando ? (
+            <ActivityIndicator color={colores.sobreAcento} />
+          ) : (
+            <>
+              {Icono ? <Icono size={20} color={colores.sobreAcento} strokeWidth={2} /> : null}
+              <Texto tono="sobreAcento" fuerte>
+                {texto}
+              </Texto>
+            </>
+          )}
+        </LinearGradient>
       </Pressable>
     </Animated.View>
   )

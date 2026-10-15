@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native'
 import { Sparkles } from 'lucide-react-native'
 import { construirSobreEjercicio, type Equipo, type Perfil, type Plan, type Zona } from '@brio/motor'
 
+import { useAuth } from '@/auth/contexto'
 import { nombreEjercicio } from '@/datos/nombres'
 import type { Repositorio } from '@/db/repositorio'
 import { alternativasEjercicio, type AlternativaEjercicio } from '@/dia/logica'
@@ -48,6 +49,7 @@ export function HojaSustitucionEjercicio({
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale } = useLocale()
+  const { esPremium } = useAuth()
   const [paso, setPaso] = useState<Paso>('motivo')
   const [zona, setZona] = useState<Zona | null>(null)
   const [equipoFuera, setEquipoFuera] = useState<Equipo | null>(null)
@@ -74,6 +76,8 @@ export function HojaSustitucionEjercicio({
     void (async () => {
       setAdaptada(null)
       setOrigen('motor')
+      // La vía IA es premium; los gratis usan el motor local, que filtra igual lesiones y equipo.
+      if (!esPremium) return
       let consentimientoLlm = false
       try {
         consentimientoLlm = (await repo.ajustesApp()).consentimientoLlm
@@ -100,7 +104,7 @@ export function HojaSustitucionEjercicio({
     return () => {
       vivo = false
     }
-  }, [visible, paso, alternativas.vacio, sobre, idRechazado, repo])
+  }, [visible, paso, alternativas.vacio, sobre, idRechazado, repo, esPremium])
 
   const reiniciar = () => {
     setPaso('motivo')

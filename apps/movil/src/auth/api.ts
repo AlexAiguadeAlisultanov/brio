@@ -1,4 +1,5 @@
 import { urlApi } from '../llm/cliente'
+import { ErrorApi } from './errores'
 
 // Cliente de cuentas y pago contra el backend. Envía el token en la cabecera Authorization.
 // Nunca guarda la contraseña; solo maneja el token que devuelve el servidor.
@@ -9,14 +10,7 @@ export interface Usuario {
   premiumHasta: string | null
 }
 
-export class ErrorApi extends Error {
-  constructor(
-    public codigo: string,
-    public estado: number,
-  ) {
-    super(codigo)
-  }
-}
+export { ErrorApi }
 
 const TIMEOUT_MS = 10000
 

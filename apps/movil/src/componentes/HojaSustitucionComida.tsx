@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native'
 import { Sparkles } from 'lucide-react-native'
 import { construirSobreComida, type ItemComida, type Macros, type Perfil, type Plan } from '@brio/motor'
 
+import { useAuth } from '@/auth/contexto'
 import { nombreAlimento } from '@/datos/nombres'
 import type { DurezaRestriccion, Repositorio } from '@/db/repositorio'
 import { alternativasComida, deltaFrenteObjetivo, type AlternativaComida, type ObjetivoDia } from '@/dia/logica'
@@ -60,6 +61,7 @@ export function HojaSustitucionComida({
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale } = useLocale()
+  const { esPremium } = useAuth()
   const [paso, setPaso] = useState<Paso>('motivo')
   const [excluirId, setExcluirId] = useState<string | null>(null)
   const [origen, setOrigen] = useState<Origen>('motor')
@@ -98,6 +100,9 @@ export function HojaSustitucionComida({
     void (async () => {
       setAdaptada(null)
       setOrigen('motor')
+      // La vía IA es premium: los gratis se quedan con el motor local, que cumple igual todas
+      // las restricciones. Sin consentimiento, tampoco se intenta.
+      if (!esPremium) return
       let consentimientoLlm = false
       try {
         consentimientoLlm = (await repo.ajustesApp()).consentimientoLlm
@@ -123,7 +128,7 @@ export function HojaSustitucionComida({
     return () => {
       vivo = false
     }
-  }, [visible, paso, comida, alternativas.vacio, sobre, objetivo, principal, repo])
+  }, [visible, paso, comida, alternativas.vacio, sobre, objetivo, principal, repo, esPremium])
 
   const reiniciar = () => {
     setPaso('motivo')

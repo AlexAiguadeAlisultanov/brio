@@ -100,6 +100,7 @@ interface FilaAjustesApp {
   aviso_aceptado: number
   racha_dias: number
   consentimiento_llm: number
+  terminos_aceptados_en: string | null
 }
 
 export class RepositorioSQLite implements Repositorio {
@@ -494,7 +495,7 @@ export class RepositorioSQLite implements Repositorio {
 
   async ajustesApp(): Promise<AjustesApp> {
     const fila = await this.db.getFirstAsync<FilaAjustesApp>(
-      'SELECT locale, unidades, aviso_aceptado, racha_dias, consentimiento_llm FROM ajustes_app WHERE id = 1',
+      'SELECT locale, unidades, aviso_aceptado, racha_dias, consentimiento_llm, terminos_aceptados_en FROM ajustes_app WHERE id = 1',
     )
     if (!fila) return { ...AJUSTES_APP_POR_DEFECTO }
     return {
@@ -503,6 +504,7 @@ export class RepositorioSQLite implements Repositorio {
       avisoAceptado: aBool(fila.aviso_aceptado),
       rachaDias: fila.racha_dias,
       consentimientoLlm: aBool(fila.consentimiento_llm),
+      terminosAceptadosEn: fila.terminos_aceptados_en ?? null,
     }
   }
 
@@ -510,20 +512,22 @@ export class RepositorioSQLite implements Repositorio {
     const actual = await this.ajustesApp()
     const fusion: AjustesApp = { ...actual, ...parcial }
     await this.db.runAsync(
-      `INSERT INTO ajustes_app (id, locale, unidades, aviso_aceptado, racha_dias, consentimiento_llm, actualizado_en)
-       VALUES (1, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO ajustes_app (id, locale, unidades, aviso_aceptado, racha_dias, consentimiento_llm, terminos_aceptados_en, actualizado_en)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          locale = excluded.locale,
          unidades = excluded.unidades,
          aviso_aceptado = excluded.aviso_aceptado,
          racha_dias = excluded.racha_dias,
          consentimiento_llm = excluded.consentimiento_llm,
+         terminos_aceptados_en = excluded.terminos_aceptados_en,
          actualizado_en = excluded.actualizado_en`,
       fusion.locale,
       fusion.unidades,
       aInt(fusion.avisoAceptado),
       fusion.rachaDias,
       aInt(fusion.consentimientoLlm),
+      fusion.terminosAceptadosEn,
       ahora(),
     )
   }

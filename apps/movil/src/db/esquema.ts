@@ -13,7 +13,7 @@
 export const NOMBRE_BASE = 'brio.db'
 
 // Versión del esquema. Sube de uno en uno; cada salto necesita su paso en migraciones.ts.
-export const VERSION_ESQUEMA = 3
+export const VERSION_ESQUEMA = 4
 
 // Creación completa del esquema en su versión 1.
 export const SQL_CREAR_V1 = `
@@ -149,6 +149,12 @@ CREATE TABLE IF NOT EXISTS dia_congelado (
   fecha TEXT PRIMARY KEY,
   creado_en TEXT NOT NULL
 );
+`
+
+// Versión 4: la fecha en que el usuario aceptó los términos y la renovación automática antes de
+// pagar premium. Se guarda para dejar constancia del consentimiento; null mientras no lo acepte.
+export const SQL_CREAR_V4 = `
+ALTER TABLE ajustes_app ADD COLUMN terminos_aceptados_en TEXT;
 `
 
 // Nombres de todas las tablas, para poder restablecer los datos locales (ruta de rescate).

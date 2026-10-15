@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Dimensions, Pressable, View } from 'react-native'
 import { CalendarCheck, ChevronRight, LineChart } from 'lucide-react-native'
@@ -10,11 +10,14 @@ import {
   GraficoTendencia,
   HojaCheckin,
   HojaInferior,
+  InsigniaPremium,
+  MuroPremium,
   PantallaScroll,
   Texto,
   numero,
   tocar,
 } from '@/componentes'
+import { useAuth } from '@/auth/contexto'
 import { nombreEjercicio } from '@/datos/nombres'
 import type { MarcaPersonal } from '@/db/repositorio'
 import { useRepositorio } from '@/db/provider'
@@ -38,9 +41,11 @@ function decimal(valor: number, locale: 'es' | 'ca' | 'en'): string {
 
 export default function Progreso() {
   const repo = useRepositorio()
+  const router = useRouter()
   const { colores, espaciado, radios } = useTema()
   const t = useT()
   const { locale } = useLocale()
+  const { esPremium } = useAuth()
   const hoy = fechaISO()
 
   const [cargando, setCargando] = useState(true)
@@ -201,13 +206,15 @@ export default function Progreso() {
           accessibilityRole="button"
           onPress={() => {
             tocar()
-            setCheckinAbierto(true)
+            if (esPremium) setCheckinAbierto(true)
+            else router.push('/premium')
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: espaciado.dos, padding: espaciado.dos, borderRadius: radios.m, borderWidth: 1, borderColor: colores.borde }}>
           <LineChart size={20} color={colores.textoSecundario} strokeWidth={2} />
           <Texto fuerte style={{ flex: 1 }}>
             {t('checkin.titulo')}
           </Texto>
+          {esPremium ? null : <InsigniaPremium texto={t('premium.insignia')} />}
           <ChevronRight size={20} color={colores.textoSecundario} strokeWidth={2} />
         </Pressable>
       </View>
@@ -234,7 +241,10 @@ export default function Progreso() {
         </Texto>
       </View>
 
-      {/* Mejores marcas. */}
+      {/* Mejores marcas: progreso avanzado, tras el muro para quien no es premium. */}
+      {!esPremium ? (
+        <MuroPremium titulo={t('muro.prs.titulo')} texto={t('muro.prs.texto')} onAbrir={() => router.push('/premium')} />
+      ) : (
       <View style={{ gap: espaciado.dos }}>
         <Texto variante="seccion" fuerte>
           {t('progreso.prs.titulo')}
@@ -265,6 +275,7 @@ export default function Progreso() {
           </View>
         )}
       </View>
+      )}
 
       {plan ? (
         <HojaCheckin
