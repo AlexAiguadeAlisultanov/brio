@@ -54,7 +54,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     // Pasarela del backend (cuentas, pagos e IA). Se fija por entorno en cada build.
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? '',
-    // Proyecto de EAS (builds en la nube). Lo conecta `eas init --id`.
-    eas: { projectId: '5c833e8d-5fde-4d7a-baac-dadeee648347' },
+    // Proyecto de EAS (builds en la nube). Se enlaza con `eas init` (crea el proyecto "brio"
+    // bajo tu cuenta). Pega aquí el projectId que te imprima, o déjalo por entorno.
+    eas: { projectId: process.env.EAS_PROJECT_ID ?? 'b976e2a7-e3d6-4d94-b793-9c34fdb73100' },
   },
 })
