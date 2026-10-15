@@ -10,7 +10,10 @@ web-build/
 !.env.example
 
 # Base de datos local del backend (SQLite). No se versiona.
-datos/
+# OJO: anclado al backend. Un `datos/` suelto también ignoraba apps/movil/src/datos/
+# (código de la app), y EAS lo dejaba fuera del build. Los *.db ya cubren el contenido.
+/datos/
+/apps/proxy/datos/
 *.db
 *.db-wal
 *.db-shm
