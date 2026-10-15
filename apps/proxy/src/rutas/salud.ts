@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { estadoCircuito } from '../circuito'
 import { hayClave, MODELO_LLM } from '../anthropic'
 import { hayStripe } from '../stripe'
+import { tipoBase } from '../db'
 
 // Dice si el backend puede adaptar con el LLM y si el pago está configurado. La app lo
 // consulta para saber si merece la pena intentar la ruta online o ir directa a su respaldo
@@ -14,6 +15,7 @@ rutaSalud.get('/api/salud', (_req, res) => {
     llm: hayClave(),
     modelo: hayClave() ? MODELO_LLM : null,
     pago: hayStripe(),
+    base: tipoBase(),
     circuito: estadoCircuito(),
   })
 })

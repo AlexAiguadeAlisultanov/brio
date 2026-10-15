@@ -240,6 +240,14 @@ function hashToken(enClaro: string): string {
   return createHmac('sha256', secreto).update(enClaro).digest('hex')
 }
 
+// Qué base hay configurada, sin abrir conexión ni tocar disco. Lo usa /api/salud para
+// confirmar de un vistazo que en producción se está usando Turso y no un fichero efímero.
+export function tipoBase(): 'turso' | 'memoria' | 'fichero' {
+  if (process.env.BRIO_DB_URL?.trim()) return 'turso'
+  const ruta = process.env.DB_PATH ?? './datos/brio.db'
+  return ruta.startsWith(':') ? 'memoria' : 'fichero'
+}
+
 // Solo para tests: cierra y olvida la conexión para poder empezar de cero.
 export async function _reiniciarBaseParaTests(): Promise<void> {
   const actual = conexion
