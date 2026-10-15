@@ -1,0 +1,16 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { ProveedorIdioma } from './useLang'
+import { App } from './App'
+import './styles/global.css'
+
+const raiz = document.getElementById('root')
+if (!raiz) throw new Error('No se encontró el nodo #root')
+
+createRoot(raiz).render(
+  <StrictMode>
+    <ProveedorIdioma>
+      <App />
+    </ProveedorIdioma>
+  </StrictMode>,
+)
