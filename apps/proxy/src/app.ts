@@ -12,6 +12,11 @@ import { rutaSalud } from './rutas/salud'
 export function crearApp(): express.Express {
   const app = express()
 
+  // Detrás de un proxy (Render, y cualquier PaaS) la IP real llega en X-Forwarded-For. Sin
+  // esto, express-rate-limit lanza un ValidationError y no identifica bien a cada cliente.
+  // Confiamos en un salto (el balanceador del hosting), no en toda la cadena.
+  app.set('trust proxy', 1)
+
   app.use(helmet())
 
   const origenes = (process.env.ORIGEN_PERMITIDO ?? '')
