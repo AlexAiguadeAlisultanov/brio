@@ -9,12 +9,16 @@ import {
   type SobreEjercicio,
 } from '@brio/motor'
 import { elegirConLlm, hayClave } from '../anthropic'
+import { requiereAuth, requierePremium } from '../auth'
 import { hayCupo, registrarLlamada } from '../circuito'
 
 // POST /api/adaptar: el LLM elige un candidato ya válido del sobre; el motor calcula la
 // porción y REVALIDA contra el mismo sobre. Si algo no cuadra, no hay clave, no hay cupo o
 // el modelo falla, responde {fallback:true} para que la app use su respaldo determinista
 // local. Nunca devuelve algo que viole una exclusión del sobre.
+//
+// La IA es una ventaja de premium: exige sesión (401 sin token) y premium vigente
+// (403 {necesitaPremium:true}). El plan gratuito sigue funcionando con su motor local.
 
 export const rutaAdaptar = Router()
 
@@ -64,7 +68,7 @@ function sanear(texto: string | undefined): string | undefined {
   return limpio.length > 0 ? limpio : undefined
 }
 
-rutaAdaptar.post('/api/adaptar', async (req, res) => {
+rutaAdaptar.post('/api/adaptar', requiereAuth, requierePremium, async (req, res) => {
   const parseo = Cuerpo.safeParse(req.body)
   if (!parseo.success) {
     res.status(400).json({ error: 'cuerpo_invalido' })

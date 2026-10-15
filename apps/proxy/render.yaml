@@ -19,3 +19,25 @@ services:
         sync: false
       - key: TOPE_PETICIONES_DIA
         value: "500"
+      # Secreto para firmar los tokens de sesión. Lo pones tú en el panel de Render.
+      - key: TOKEN_SECRETO
+        sync: false
+      # OJO: el disco de Render es efímero; esta base SQLite se pierde en cada
+      # despliegue. Para producción de verdad, migrar a Turso/Postgres.
+      - key: DB_PATH
+        value: ./datos/brio.db
+      # Pagos (Stripe). En modo pruebas, claves sk_test_ y whsec_. Las pones tú.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: PRECIO_CENTIMOS
+        value: "499"
+      - key: MONEDA
+        value: eur
+      - key: URL_EXITO
+        sync: false
+      - key: URL_CANCELAR
+        sync: false

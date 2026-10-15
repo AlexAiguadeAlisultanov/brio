@@ -8,6 +8,12 @@ web-build/
 .env
 .env.*
 !.env.example
+
+# Base de datos local del backend (SQLite). No se versiona.
+datos/
+*.db
+*.db-wal
+*.db-shm
 .DS_Store
 Thumbs.db
 *.tsbuildinfo

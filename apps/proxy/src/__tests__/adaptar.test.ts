@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import request from 'supertest'
 
+// Base en memoria y límites altos para que el rate-limit no estorbe en los tests.
+process.env.DB_PATH = ':memory:'
+process.env.TOKEN_SECRETO = 'secreto-de-prueba'
+process.env.LIMITE_API = '100000'
+process.env.LIMITE_AUTH = '100000'
+
 // Mockeamos el cliente del LLM y el circuito: los tests no tocan la red ni necesitan clave.
 vi.mock('../anthropic', () => ({
   hayClave: vi.fn(() => true),
@@ -18,8 +24,16 @@ import { alimentosValidos } from '@brio/motor'
 import { crearApp } from '../app'
 import { elegirConLlm, hayClave } from '../anthropic'
 import { hayCupo } from '../circuito'
+import { crearSesion, crearUsuario, fijarPremium } from '../db'
 
 const app = crearApp()
+
+// Crea un usuario (opcionalmente premium) directamente en la base y devuelve su token.
+function tokenDe(premium: boolean, email = `u${Math.random()}@brio.test`): string {
+  const usuario = crearUsuario({ email, hash: 'x'.repeat(128), sal: 'ab' })
+  if (premium) fijarPremium(usuario.id, true, null)
+  return crearSesion(usuario.id)
+}
 
 // Un candidato real del catálogo, con suficiente densidad para que escale dentro de rango.
 const candidato =
@@ -43,11 +57,20 @@ function sobreComida(candidatos: string[]) {
   }
 }
 
+let tokenPremium: string
+
 beforeEach(() => {
   vi.mocked(hayClave).mockReturnValue(true)
   vi.mocked(hayCupo).mockReturnValue(true)
   vi.mocked(elegirConLlm).mockResolvedValue(null)
+  tokenPremium = tokenDe(true)
 })
+
+function pedirAdaptar(token: string | null, cuerpo: unknown) {
+  const r = request(app).post('/api/adaptar')
+  if (token) r.set('Authorization', `Bearer ${token}`)
+  return r.send(cuerpo as object)
+}
 
 describe('GET /api/salud', () => {
   it('dice si hay clave y el estado del circuito', async () => {
@@ -55,6 +78,7 @@ describe('GET /api/salud', () => {
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
     expect(res.body.llm).toBe(true)
+    expect(res.body).toHaveProperty('pago')
   })
 
   it('refleja que no hay clave', async () => {
@@ -65,39 +89,52 @@ describe('GET /api/salud', () => {
   })
 })
 
-describe('POST /api/adaptar', () => {
-  it('rechaza un cuerpo mal formado antes de tocar el SDK', async () => {
-    const res = await request(app).post('/api/adaptar').send({ cualquier: 'cosa' })
+describe('POST /api/adaptar (protegida)', () => {
+  it('sin token responde 401', async () => {
+    const res = await pedirAdaptar(null, { sobre: sobreComida([candidato.id]) })
+    expect(res.status).toBe(401)
+    expect(elegirConLlm).not.toHaveBeenCalled()
+  })
+
+  it('con sesión pero sin premium responde 403 {necesitaPremium:true}', async () => {
+    const res = await pedirAdaptar(tokenDe(false), { sobre: sobreComida([candidato.id]) })
+    expect(res.status).toBe(403)
+    expect(res.body.necesitaPremium).toBe(true)
+    expect(elegirConLlm).not.toHaveBeenCalled()
+  })
+
+  it('premium: rechaza un cuerpo mal formado antes de tocar el SDK', async () => {
+    const res = await pedirAdaptar(tokenPremium, { cualquier: 'cosa' })
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('cuerpo_invalido')
     expect(elegirConLlm).not.toHaveBeenCalled()
   })
 
-  it('sin clave responde 503 y pide usar el respaldo local', async () => {
+  it('premium sin clave responde 503 y pide usar el respaldo local', async () => {
     vi.mocked(hayClave).mockReturnValue(false)
-    const res = await request(app).post('/api/adaptar').send({ sobre: sobreComida([candidato.id]) })
+    const res = await pedirAdaptar(tokenPremium, { sobre: sobreComida([candidato.id]) })
     expect(res.status).toBe(503)
     expect(res.body.fallback).toBe(true)
     expect(res.body.motivo).toBe('sin_clave')
   })
 
-  it('sin cupo diario responde 503 fallback', async () => {
+  it('premium sin cupo diario responde 503 fallback', async () => {
     vi.mocked(hayCupo).mockReturnValue(false)
-    const res = await request(app).post('/api/adaptar').send({ sobre: sobreComida([candidato.id]) })
+    const res = await pedirAdaptar(tokenPremium, { sobre: sobreComida([candidato.id]) })
     expect(res.status).toBe(503)
     expect(res.body.motivo).toBe('sin_cupo')
   })
 
-  it('si el LLM no elige, responde 422 fallback', async () => {
+  it('premium: si el LLM no elige, responde 422 fallback', async () => {
     vi.mocked(elegirConLlm).mockResolvedValue(null)
-    const res = await request(app).post('/api/adaptar').send({ sobre: sobreComida([candidato.id]) })
+    const res = await pedirAdaptar(tokenPremium, { sobre: sobreComida([candidato.id]) })
     expect(res.status).toBe(422)
     expect(res.body.motivo).toBe('sin_eleccion')
   })
 
-  it('camino feliz: el motor valida la elección del LLM y responde la sustitución', async () => {
+  it('premium, camino feliz: el motor valida la elección del LLM y responde la sustitución', async () => {
     vi.mocked(elegirConLlm).mockResolvedValue({ eleccionId: candidato.id, motivoId: 'equivalente' })
-    const res = await request(app).post('/api/adaptar').send({ sobre: sobreComida([candidato.id]) })
+    const res = await pedirAdaptar(tokenPremium, { sobre: sobreComida([candidato.id]) })
     expect(res.status).toBe(200)
     expect(res.body.fuente).toBe('llm')
     expect(res.body.sustitucion.vacio).toBe(false)
