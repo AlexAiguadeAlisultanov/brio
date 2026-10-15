@@ -79,9 +79,16 @@ export default function Premium() {
 
   const comprar = async (modo: 'suscripcion' | 'pase') => {
     setComprando(modo)
-    const r = await comprarPremium(modo)
-    if (r.sinPago) setSinPago(true)
-    setComprando(null)
+    try {
+      const r = await comprarPremium(modo)
+      if (r.sinPago) setSinPago(true)
+    } catch {
+      // Si el pago falla (servidor caído, Stripe mal configurado, sin conexión), no dejamos el
+      // botón cargando para siempre: avisamos de que ahora mismo no se puede.
+      setSinPago(true)
+    } finally {
+      setComprando(null)
+    }
   }
 
   return (

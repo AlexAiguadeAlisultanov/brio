@@ -111,8 +111,12 @@ rutaPago.post('/api/pago/checkout', requiereAuth, async (req, res) => {
     }
     const sesion = await stripe.checkout.sessions.create(params)
     res.json({ url: sesion.url })
-  } catch {
-    // No filtramos el detalle del error de Stripe al cliente ni al log.
+  } catch (e) {
+    // Al cliente no le damos el detalle, pero SÍ lo registramos en el servidor (p. ej. en los
+    // logs de Render) para poder diagnosticar por qué falla Stripe: clave sin permisos, precio
+    // inexistente, modo test/live cruzado, etc.
+    const err = e as { type?: string; code?: string; message?: string }
+    console.error('[pago] checkout falló:', err?.type ?? '', err?.code ?? '', err?.message ?? e)
     res.status(502).json({ error: 'pago_no_disponible' })
   }
 })

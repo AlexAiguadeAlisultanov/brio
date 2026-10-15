@@ -66,7 +66,9 @@ export async function crearCheckout(token: string, modo: 'suscripcion' | 'pase')
     const r = await pedir<{ url?: string }>('/api/pago/checkout', { metodo: 'POST', token, cuerpo: { modo } })
     return r.url ?? null
   } catch (e) {
-    if (e instanceof ErrorApi && e.estado === 503) return null // sinPago
+    // 503 = el servidor no tiene pago configurado; 502 = Stripe falló al crear la sesión. En
+    // ambos el pago no está disponible ahora mismo: devolvemos null para no colgar el botón.
+    if (e instanceof ErrorApi && (e.estado === 503 || e.estado === 502)) return null // sinPago
     throw e
   }
 }
