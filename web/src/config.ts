@@ -13,7 +13,7 @@
  *    export const APK_URL = 'https://expo.dev/artifacts/eas/XXXXXXXX.apk'
  * ========================================================================== */
 
-export const APK_URL: string = 'https://expo.dev/artifacts/eas/RuZ9_o4AyC9qNdOEpopwXP3tZKRRfLOI1JfHHI_A82A.apk'
+export const APK_URL: string = 'https://expo.dev/artifacts/eas/OcCSquMoyedu_stKBBdeH-ZzgqIIsas6PZAu7Ats-2k.apk'
 
 // Valor centinela. Si APK_URL sigue siendo este texto, aun no hay enlace.
 export const APK_PENDIENTE = 'PENDIENTE_URL_APK'
