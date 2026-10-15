@@ -1,10 +1,9 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config'
 
-// Configuración de la app Brío. El acento naranja es un marcador de posición: el icono y la
-// pantalla de carga definitivos los afinará el diseño más adelante. La URL del proxy llega
-// por entorno (EXPO_PUBLIC_API_URL); todavía no se usa, pero queda cableada para el futuro.
+// Configuración de la app Brío. Icono y splash: monograma "B" naranja sobre fondo oscuro,
+// la misma marca que la landing y la app. La URL del proxy llega por entorno
+// (EXPO_PUBLIC_API_URL).
 
-const ACENTO = '#FB6A1E'
 const FONDO_OSCURO = '#0B0B0C'
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -20,7 +19,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.alexaiguade.brio',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundColor: ACENTO,
+      monochromeImage: './assets/images/android-icon-monochrome.png',
+      backgroundColor: FONDO_OSCURO,
     },
     predictiveBackGestureEnabled: false,
   },
