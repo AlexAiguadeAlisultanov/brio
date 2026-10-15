@@ -251,8 +251,11 @@ export async function manejarWebhook(req: Request, res: Response): Promise<void>
         break
     }
   } catch {
-    // Un fallo procesando no debe hacer que Stripe reintente en bucle por algo nuestro;
-    // respondemos 200 igualmente para no entrar en reintentos infinitos.
+    // Si falla al persistir (p. ej. un corte de red con Turso), devolvemos 500 para que
+    // Stripe reintente y no se pierda en silencio una activación de premium. Stripe acota
+    // los reintentos con backoff (se rinde a los ~3 días), así que no hay bucle infinito.
+    res.status(500).json({ error: 'error_procesando' })
+    return
   }
 
   res.json({ recibido: true })
