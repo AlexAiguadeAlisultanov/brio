@@ -4,7 +4,9 @@ import type { ExpoConfig, ConfigContext } from 'expo/config'
 // la misma marca que la landing y la app. La URL del proxy llega por entorno
 // (EXPO_PUBLIC_API_URL).
 
-const FONDO_OSCURO = '#0B0B0C'
+// Negro del logo de Brío: lo usan el fondo del icono adaptativo y el splash, para que el
+// recuadro del logo funda con el fondo sin costuras.
+const FONDO_OSCURO = '#000000'
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -19,7 +21,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.alexaiguade.brio',
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      monochromeImage: './assets/images/android-icon-monochrome.png',
       backgroundColor: FONDO_OSCURO,
     },
     predictiveBackGestureEnabled: false,
