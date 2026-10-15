@@ -22,8 +22,15 @@ services:
       # Secreto para firmar los tokens de sesión. Lo pones tú en el panel de Render.
       - key: TOKEN_SECRETO
         sync: false
-      # OJO: el disco de Render es efímero; esta base SQLite se pierde en cada
-      # despliegue. Para producción de verdad, migrar a Turso/Postgres.
+      # Base de datos persistente en Turso (libSQL). Las pones tú: crea la base con
+      # `turso db create brio` y el token con `turso db tokens create brio`; la URL sale de
+      # `turso db show brio --url`. Sin BRIO_DB_URL el proxy cae a un fichero SQLite local
+      # (DB_PATH), cuyo disco es EFÍMERO en Render: las cuentas se pierden en cada despliegue.
+      - key: BRIO_DB_URL
+        sync: false
+      - key: BRIO_DB_TOKEN
+        sync: false
+      # Respaldo local si no hay Turso (solo desarrollo o demo desechable).
       - key: DB_PATH
         value: ./datos/brio.db
       # Pagos (Stripe). En modo pruebas, claves sk_test_ y whsec_. Las pones tú.

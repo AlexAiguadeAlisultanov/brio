@@ -2,7 +2,7 @@
 
 Servidor de Brío: cuentas de usuario, sesión por token, planes gratis/premium con
 entitlement, adaptación por IA (Claude) y pagos con Stripe en modo pruebas. Express 5 +
-TypeScript, base SQLite con `node:sqlite` (sin dependencias nativas). La app móvil y la web
+TypeScript, base libSQL (SQLite local o Turso en producción). La app móvil y la web
 hablan con este backend; las claves (Claude y Stripe) viven solo aquí.
 
 ## Arrancar
@@ -21,8 +21,16 @@ y el pago responde `503 {sinPago:true}`. La demo arranca sin secretos.
 
 ## Base de datos
 
-`node:sqlite`, incluido en Node 24. Ruta por `DB_PATH` (por defecto `./datos/brio.db`; la
-carpeta se crea sola). Dos tablas:
+libSQL con `@libsql/client` (SQLite, pero también Turso). Es asíncrona: toda la capa de
+`src/db.ts` devuelve promesas, salvo `usuarioEsPremium`, que es lógica pura. La base se elige por
+entorno, en este orden:
+
+1. `BRIO_DB_URL` (+ `BRIO_DB_TOKEN`) → **Turso**, base persistente en la nube. Es lo de producción.
+2. Si no, un fichero local en `DB_PATH` (por defecto `./datos/brio.db`; la carpeta se crea sola).
+   `DB_PATH=:memory:` da una base en memoria, que es lo que usan los tests (que además fuerzan
+   `BRIO_DB_URL` vacío para no tocar nunca una base remota).
+
+Las tablas se crean solas al primer uso. Dos tablas:
 
 - `usuario(id, email UNIQUE, hash, sal, creado_en, premium, premium_hasta, stripe_customer_id, stripe_subscription_id)`
 - `sesion(token PK, usuario_id, creado_en, expira_en)` — el `token` guardado es el **hash**
@@ -30,9 +38,15 @@ carpeta se crea sola). Dos tablas:
 
 Siempre con sentencias preparadas, nunca SQL concatenado.
 
-> **Producción:** en Render el disco es **efímero** y se borra en cada despliegue, así que una
-> base SQLite en fichero pierde las cuentas al redesplegar. Para producción de verdad conviene
-> una base persistente (Turso o Postgres). Para la demo, SQLite en fichero es suficiente.
+> **Producción:** en Render el disco es **efímero** y se borra en cada despliegue, así que el
+> fichero local pierde las cuentas al redesplegar. Por eso producción usa Turso. Crear la base
+> una vez con la CLI de Turso y poner las dos variables en Render:
+>
+> ```bash
+> turso db create brio
+> turso db show brio --url       # -> BRIO_DB_URL (libsql://...)
+> turso db tokens create brio    # -> BRIO_DB_TOKEN
+> ```
 
 ## Sesión por token y entitlement
 
@@ -85,7 +99,7 @@ Nunca se registran en logs datos sensibles del pago.
 ## Variables de entorno
 
 Ver `.env.example` (comentado). Resumen: `ANTHROPIC_API_KEY`, `MODELO_LLM`,
-`TOPE_PETICIONES_DIA` (IA); `DB_PATH`, `TOKEN_SECRETO`, `DIAS_SESION` (base y sesión);
+`TOPE_PETICIONES_DIA` (IA); `BRIO_DB_URL`, `BRIO_DB_TOKEN`, `DB_PATH`, `TOKEN_SECRETO`, `DIAS_SESION` (base y sesión);
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` (opcional), `PRECIO_CENTIMOS`,
 `MONEDA`, `URL_EXITO`, `URL_CANCELAR` (pagos); `ORIGEN_PERMITIDO`, `PORT`, `LIMITE_API`,
 `LIMITE_AUTH` (red).

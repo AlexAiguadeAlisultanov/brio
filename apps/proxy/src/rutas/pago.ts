@@ -8,6 +8,7 @@ import {
   guardarSuscripcion,
   obtenerUsuarioPorCustomer,
   obtenerUsuarioPorId,
+  type Usuario,
 } from '../db'
 import { DIAS_PASE, MONEDA, PRECIO_CENTIMOS, hayStripe, obtenerStripe } from '../stripe'
 
@@ -34,10 +35,10 @@ function dentroDeDias(dias: number): string {
 
 // Garantiza que el usuario tenga un cliente de Stripe; crea uno si hace falta y lo guarda.
 async function asegurarCliente(stripe: Stripe, usuarioId: string, email: string): Promise<string> {
-  const usuario = obtenerUsuarioPorId(usuarioId)
+  const usuario = await obtenerUsuarioPorId(usuarioId)
   if (usuario?.stripe_customer_id) return usuario.stripe_customer_id
   const cliente = await stripe.customers.create({ email, metadata: { usuarioId } })
-  guardarCustomer(usuarioId, cliente.id)
+  await guardarCustomer(usuarioId, cliente.id)
   return cliente.id
 }
 
@@ -125,7 +126,7 @@ rutaPago.post('/api/pago/portal', requiereAuth, async (req, res) => {
     res.status(503).json({ sinPago: true })
     return
   }
-  const registro = obtenerUsuarioPorId(req.usuario!.id)
+  const registro = await obtenerUsuarioPorId(req.usuario!.id)
   if (!registro?.stripe_customer_id) {
     res.status(409).json({ error: 'sin_cliente' })
     return
@@ -149,9 +150,9 @@ function idDe(valor: string | { id: string } | null | undefined): string | null 
 }
 
 // Localiza al usuario de un evento por el id de cliente o, si no, por la metadata.
-function usuarioDeEvento(customerId: string | null, usuarioId: string | null) {
+async function usuarioDeEvento(customerId: string | null, usuarioId: string | null): Promise<Usuario | null> {
   if (customerId) {
-    const porCliente = obtenerUsuarioPorCustomer(customerId)
+    const porCliente = await obtenerUsuarioPorCustomer(customerId)
     if (porCliente) return porCliente
   }
   if (usuarioId) return obtenerUsuarioPorId(usuarioId)
@@ -189,17 +190,17 @@ export async function manejarWebhook(req: Request, res: Response): Promise<void>
     switch (evento.type) {
       case 'checkout.session.completed': {
         const sesion = evento.data.object as Stripe.Checkout.Session
-        const usuario = usuarioDeEvento(idDe(sesion.customer), sesion.metadata?.usuarioId ?? null)
+        const usuario = await usuarioDeEvento(idDe(sesion.customer), sesion.metadata?.usuarioId ?? null)
         if (!usuario) break
-        if (idDe(sesion.customer)) guardarCustomer(usuario.id, idDe(sesion.customer)!)
+        if (idDe(sesion.customer)) await guardarCustomer(usuario.id, idDe(sesion.customer)!)
 
         if (sesion.mode === 'payment' && sesion.payment_status === 'paid') {
           // Pase: premium durante DIAS_PASE días desde ahora.
-          fijarPremium(usuario.id, true, dentroDeDias(DIAS_PASE))
+          await fijarPremium(usuario.id, true, dentroDeDias(DIAS_PASE))
         } else if (sesion.mode === 'subscription') {
           // La activación fina llega en subscription.updated / invoice.paid; de momento
           // dejamos anotada la suscripción.
-          if (idDe(sesion.subscription)) guardarSuscripcion(usuario.id, idDe(sesion.subscription))
+          if (idDe(sesion.subscription)) await guardarSuscripcion(usuario.id, idDe(sesion.subscription))
         }
         break
       }
@@ -207,7 +208,7 @@ export async function manejarWebhook(req: Request, res: Response): Promise<void>
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const sub = evento.data.object as Stripe.Subscription
-        const usuario = usuarioDeEvento(idDe(sub.customer), sub.metadata?.usuarioId ?? null)
+        const usuario = await usuarioDeEvento(idDe(sub.customer), sub.metadata?.usuarioId ?? null)
         if (!usuario) break
         const activa =
           evento.type === 'customer.subscription.updated' &&
@@ -216,32 +217,32 @@ export async function manejarWebhook(req: Request, res: Response): Promise<void>
           const finPeriodo = isoDeUnix(
             (sub as unknown as { current_period_end?: number }).current_period_end,
           )
-          fijarPremium(usuario.id, true, finPeriodo)
-          guardarSuscripcion(usuario.id, sub.id)
+          await fijarPremium(usuario.id, true, finPeriodo)
+          await guardarSuscripcion(usuario.id, sub.id)
         } else {
           // Cancelada, impagada o borrada: fuera premium.
-          fijarPremium(usuario.id, false, null)
-          if (evento.type === 'customer.subscription.deleted') guardarSuscripcion(usuario.id, null)
+          await fijarPremium(usuario.id, false, null)
+          if (evento.type === 'customer.subscription.deleted') await guardarSuscripcion(usuario.id, null)
         }
         break
       }
 
       case 'invoice.paid': {
         const factura = evento.data.object as Stripe.Invoice
-        const usuario = usuarioDeEvento(idDe(factura.customer), null)
+        const usuario = await usuarioDeEvento(idDe(factura.customer), null)
         if (!usuario) break
         // Extendemos el premium hasta el fin del periodo facturado.
         const finLinea = factura.lines?.data?.[0]?.period?.end
-        fijarPremium(usuario.id, true, isoDeUnix(finLinea) ?? dentroDeDias(DIAS_PASE))
+        await fijarPremium(usuario.id, true, isoDeUnix(finLinea) ?? dentroDeDias(DIAS_PASE))
         break
       }
 
       case 'invoice.payment_failed': {
         const factura = evento.data.object as Stripe.Invoice
-        const usuario = usuarioDeEvento(idDe(factura.customer), null)
+        const usuario = await usuarioDeEvento(idDe(factura.customer), null)
         if (!usuario) break
         // Pago fallido: quitamos premium (sin periodo de gracia, por simplicidad).
-        fijarPremium(usuario.id, false, null)
+        await fijarPremium(usuario.id, false, null)
         break
       }
 

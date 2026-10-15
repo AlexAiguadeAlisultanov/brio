@@ -42,9 +42,9 @@ import { crearSesion, crearUsuario, obtenerUsuarioPorId, usuarioEsPremium } from
 
 const app = crearApp()
 
-function usuarioConToken(): { id: string; token: string } {
-  const u = crearUsuario({ email: `p${Math.random()}@brio.test`, hash: 'x'.repeat(128), sal: 'ab' })
-  return { id: u.id, token: crearSesion(u.id) }
+async function usuarioConToken(): Promise<{ id: string; token: string }> {
+  const u = await crearUsuario({ email: `p${Math.random()}@brio.test`, hash: 'x'.repeat(128), sal: 'ab' })
+  return { id: u.id, token: await crearSesion(u.id) }
 }
 
 beforeEach(() => {
@@ -63,7 +63,7 @@ describe('POST /api/pago/checkout', () => {
   it('sin STRIPE_SECRET_KEY responde 503 {sinPago:true}', async () => {
     vi.mocked(hayStripe).mockReturnValue(false)
     vi.mocked(obtenerStripe).mockReturnValue(null)
-    const { token } = usuarioConToken()
+    const { token } = await usuarioConToken()
     const res = await request(app)
       .post('/api/pago/checkout')
       .set('Authorization', `Bearer ${token}`)
@@ -73,7 +73,7 @@ describe('POST /api/pago/checkout', () => {
   })
 
   it('modo inválido da 400', async () => {
-    const { token } = usuarioConToken()
+    const { token } = await usuarioConToken()
     const res = await request(app)
       .post('/api/pago/checkout')
       .set('Authorization', `Bearer ${token}`)
@@ -82,7 +82,7 @@ describe('POST /api/pago/checkout', () => {
   })
 
   it('suscripción crea sesión con tarjeta y devuelve url', async () => {
-    const { token } = usuarioConToken()
+    const { token } = await usuarioConToken()
     const res = await request(app)
       .post('/api/pago/checkout')
       .set('Authorization', `Bearer ${token}`)
@@ -96,7 +96,7 @@ describe('POST /api/pago/checkout', () => {
   })
 
   it('pase crea sesión de pago único con tarjeta y bizum', async () => {
-    const { token } = usuarioConToken()
+    const { token } = await usuarioConToken()
     const res = await request(app)
       .post('/api/pago/checkout')
       .set('Authorization', `Bearer ${token}`)
@@ -123,7 +123,7 @@ describe('POST /api/pago/webhook', () => {
   })
 
   it('checkout.session.completed de un pase da premium 30 días', async () => {
-    const { id } = usuarioConToken()
+    const { id } = await usuarioConToken()
     fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
       type: 'checkout.session.completed',
       data: {
@@ -143,20 +143,20 @@ describe('POST /api/pago/webhook', () => {
       .send(Buffer.from('{}'))
     expect(res.status).toBe(200)
     expect(res.body.recibido).toBe(true)
-    const u = obtenerUsuarioPorId(id)!
+    const u = (await obtenerUsuarioPorId(id))!
     expect(usuarioEsPremium(u)).toBe(true)
     expect(u.premium_hasta).not.toBeNull()
   })
 
   it('subscription.deleted quita el premium', async () => {
-    const { id } = usuarioConToken()
+    const { id } = await usuarioConToken()
     // Primero lo ponemos premium con una suscripción activa.
     fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
       type: 'customer.subscription.updated',
       data: { object: { id: 'sub_1', status: 'active', customer: 'cus_sub', current_period_end: Math.floor(Date.now() / 1000) + 3600, metadata: { usuarioId: id } } },
     } as never)
     await request(app).post('/api/pago/webhook').set('stripe-signature', 'ok').set('Content-Type', 'application/json').send(Buffer.from('{}'))
-    expect(usuarioEsPremium(obtenerUsuarioPorId(id)!)).toBe(true)
+    expect(usuarioEsPremium((await obtenerUsuarioPorId(id))!)).toBe(true)
 
     // Ahora la borramos.
     fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
@@ -164,7 +164,7 @@ describe('POST /api/pago/webhook', () => {
       data: { object: { id: 'sub_1', status: 'canceled', customer: 'cus_sub', metadata: { usuarioId: id } } },
     } as never)
     await request(app).post('/api/pago/webhook').set('stripe-signature', 'ok').set('Content-Type', 'application/json').send(Buffer.from('{}'))
-    expect(usuarioEsPremium(obtenerUsuarioPorId(id)!)).toBe(false)
+    expect(usuarioEsPremium((await obtenerUsuarioPorId(id))!)).toBe(false)
   })
 
   it('sin STRIPE_WEBHOOK_SECRET o sin stripe responde 503', async () => {

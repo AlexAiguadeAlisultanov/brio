@@ -47,14 +47,14 @@ rutaCuentas.post('/api/registro', async (req, res) => {
   }
   const { email, password } = parseo.data
 
-  if (obtenerUsuarioPorEmail(email)) {
+  if (await obtenerUsuarioPorEmail(email)) {
     res.status(409).json({ error: 'email_en_uso' })
     return
   }
 
   const { hash, sal } = await hashearPassword(password)
-  const usuario = crearUsuario({ email, hash, sal })
-  const token = crearSesion(usuario.id)
+  const usuario = await crearUsuario({ email, hash, sal })
+  const token = await crearSesion(usuario.id)
   res.status(201).json({ token, usuario: vistaUsuario(usuario) })
 })
 
@@ -67,7 +67,7 @@ rutaCuentas.post('/api/acceso', async (req, res) => {
   }
   const { email, password } = parseo.data
 
-  const usuario = obtenerUsuarioPorEmail(email)
+  const usuario = await obtenerUsuarioPorEmail(email)
   // Si el email no existe, igualmente derivamos una contraseña contra una sal falsa para no
   // dar pistas por el tiempo de respuesta, y devolvemos el mismo error genérico.
   if (!usuario) {
@@ -82,7 +82,7 @@ rutaCuentas.post('/api/acceso', async (req, res) => {
     return
   }
 
-  const token = crearSesion(usuario.id)
+  const token = await crearSesion(usuario.id)
   res.json({ token, usuario: vistaUsuario(usuario) })
 })
 
@@ -90,8 +90,8 @@ rutaCuentas.get('/api/yo', requiereAuth, (req, res) => {
   res.json(vistaUsuario(req.usuario!))
 })
 
-rutaCuentas.post('/api/salir', requiereAuth, (req, res) => {
+rutaCuentas.post('/api/salir', requiereAuth, async (req, res) => {
   const token = tokenDeCabecera(req.get('authorization'))
-  if (token) borrarSesion(token)
+  if (token) await borrarSesion(token)
   res.json({ ok: true })
 })

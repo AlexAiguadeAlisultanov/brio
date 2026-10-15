@@ -55,9 +55,9 @@ function leerToken(req: Request): string | null {
 }
 
 // Exige sesión válida: resuelve el token a un usuario o responde 401.
-export function requiereAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requiereAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = leerToken(req)
-  const usuario = token ? usuarioPorToken(token) : null
+  const usuario = token ? await usuarioPorToken(token) : null
   if (!usuario) {
     res.status(401).json({ error: 'no_autenticado' })
     return

@@ -29,10 +29,10 @@ import { crearSesion, crearUsuario, fijarPremium } from '../db'
 const app = crearApp()
 
 // Crea un usuario (opcionalmente premium) directamente en la base y devuelve su token.
-function tokenDe(premium: boolean, email = `u${Math.random()}@brio.test`): string {
-  const usuario = crearUsuario({ email, hash: 'x'.repeat(128), sal: 'ab' })
-  if (premium) fijarPremium(usuario.id, true, null)
-  return crearSesion(usuario.id)
+async function tokenDe(premium: boolean, email = `u${Math.random()}@brio.test`): Promise<string> {
+  const usuario = await crearUsuario({ email, hash: 'x'.repeat(128), sal: 'ab' })
+  if (premium) await fijarPremium(usuario.id, true, null)
+  return await crearSesion(usuario.id)
 }
 
 // Un candidato real del catálogo, con suficiente densidad para que escale dentro de rango.
@@ -59,11 +59,11 @@ function sobreComida(candidatos: string[]) {
 
 let tokenPremium: string
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.mocked(hayClave).mockReturnValue(true)
   vi.mocked(hayCupo).mockReturnValue(true)
   vi.mocked(elegirConLlm).mockResolvedValue(null)
-  tokenPremium = tokenDe(true)
+  tokenPremium = await tokenDe(true)
 })
 
 function pedirAdaptar(token: string | null, cuerpo: unknown) {
@@ -97,7 +97,7 @@ describe('POST /api/adaptar (protegida)', () => {
   })
 
   it('con sesión pero sin premium responde 403 {necesitaPremium:true}', async () => {
-    const res = await pedirAdaptar(tokenDe(false), { sobre: sobreComida([candidato.id]) })
+    const res = await pedirAdaptar(await tokenDe(false), { sobre: sobreComida([candidato.id]) })
     expect(res.status).toBe(403)
     expect(res.body.necesitaPremium).toBe(true)
     expect(elegirConLlm).not.toHaveBeenCalled()
